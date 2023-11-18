@@ -1,2 +1,2 @@
-Victini Mod for PALF.
+Flintlock's Mod for PALF.
 Put game folder in PALF, preferably a new download.
