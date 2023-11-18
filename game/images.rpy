@@ -7,9 +7,8 @@ image city_A = "BG/City_A.jpg"
 image city_B = "BG/City_B.jpg"
 image academy = "BG/Academy.jpg"
 image academyold = "BG/Academy_old.jpg"
-image academyhall_dayA = "BG/AcademyHall_day.jpg"
+image academyhall = "BG/AcademyHall_day.webp"
 image academyhall_nightA = "BG/AcademyHall_night.jpg"
-image academyhall_dayB = "BG/AcademyHall_dayB.jpg"
 image academyhall_nightB = "BG/AcademyHall_nightB.jpg"
 image academyhall_blur = "BG/AcademyHall_blur.jpg"
 image academyhall_zoom = "BG/AcademyHall_Zoom.jpg"
@@ -33,6 +32,7 @@ image gym = "BG/Gym.jpg"
 image blank = "BG/Blank.jpg"
 image blank2 = "BG/Blank2.jpg"
 image blank3 = "BG/Blank3.jpg"
+image blank4 = "BG/Blank4.jpg"
 image cafe = "BG/Lobby_C2.jpg"
 image dorm_empty_A = "BG/Dorm_empty_day.jpg"
 image dorm_empty_B = "BG/Dorm_empty_night.jpg"
@@ -45,6 +45,7 @@ image hall_A = "BG/Hallway_A.jpg"
 image hall_A2 = "BG/Hallway_A2.jpg"
 image hall_A2b = "BG/Hallway_A2b.jpg"
 image hall_A flash = "BG/Hallway_A - flashback.jpg"
+image flashsick = "BG/flashsick.png"
 image hall_B = "BG/Hallway_B.jpg"
 image hall_B_night = "BG/Hallway_B night.jpg"
 image library = "BG/Library.jpg"
@@ -74,6 +75,14 @@ image fields2b = "BG/Field_2b.png"
 image forest = "BG/forest.jpg"
 image hideout = "BG/abandonedhouse.jpg"
 image seaport = "BG/seaport.png"
+image studentcouncil = "BG/Student Council Room Day.webp"
+image studentcouncilnight = "BG/Student Council Room Night.webp"
+image suite = "BG/suite.webp"
+image suitenight = "BG/suitenight.webp"
+image newhomeroom = "BG/newhomeroom.png"
+image bedroomnight = "BG/BedroomNight.png"
+image bedroommidnight = "BG/BedroomMidnight.png"
+image bedroom = "BG/BedroomDay.png"
 image v-wheel = "BG/v-wheel_bg.png"
 image time = Movie(channel="test", play="BG/time2.webm")
 image spring = Movie(channel="test", play="BG/spring.webm")
@@ -166,6 +175,9 @@ image zap_B = Transform("GFX/zap.png", xzoom=-1)
 image mapdemo = "GFX/Map.png"
 image lightbeam1 = "GFX/light_beam01.png"
 image egg = "GFX/egg.webp"
+image pikaglow1 = "GFX/PikaGlow1.png"
+image pikaglow2 = "GFX/PikaGlow2.png"
+image foreverals = "GFX/foreverals.png"
 
 #CGs
 image leafintro_A = "CG/leafintroA.jpg"
@@ -251,6 +263,28 @@ image cherenshatefultruth:
 
 image showdown = "CG/Showdown.jpg"
 
+image dawnbreakstheicebg1 = "CG/DawnBreaksTheIce/dawnbreakstheice-bg1.webp"
+image dawnbreakstheicebg2 = "CG/DawnBreaksTheIce/dawnbreakstheice-bg2.webp"
+image dawnbreakstheicebg2 = "CG/DawnBreaksTheIce/dawnbreakstheice-bg2.webp"
+image dawnbreakstheicedawn = "CG/DawnBreaksTheIce/dawnbreakstheice-dawn.webp"
+image dawnbreakstheicedawnlight = "CG/DawnBreaksTheIce/dawnbreakstheice-dawnlight.webp"
+image dawnbreakstheicedawnlight = "CG/DawnBreaksTheIce/dawnbreakstheice-dawnlight.webp"
+image dawnbreakstheiceblizzard = "CG/DawnBreaksTheIce/dawnbreakstheice-blizzard.webp"
+
+image dawnbreakstheicealtaria:
+    "CG/DawnBreaksTheIce/dawnbreakstheice-altaria.webp" with Dissolve(3.0)
+    pause 3.0
+    "CG/DawnBreaksTheIce/dawnbreakstheice-altaria-winglow.webp" with Dissolve(3.0)
+    pause 3.0
+    repeat
+
+image dawnbreakstheicealtarialight:
+    "CG/DawnBreaksTheIce/dawnbreakstheice-altarialight.webp" with Dissolve(3.0)
+    pause 3.0
+    "CG/DawnBreaksTheIce/dawnbreakstheice-altarialight-winglow.webp" with Dissolve(3.0)
+    pause 3.0
+    repeat
+
 #TRANSITIONS
 image earlymorning = Text("EARLY MORNING",size=50,color="#ffffff")
 image morning = Text("MORNING",size=50,color="#ffffff")
@@ -276,6 +310,8 @@ image thoughts11 = Text("I'm too late to help.",size=50,color="#600080")
 
 image mecredits = Text("With Additional Work By",size=50,color="#ffffff")
 image mecreditsname = Text("Freudian Creations",size=70,color="#ffffff")
+
+image gameover = Text("{cps=2}GAME OVER",slow = True, size=180,color="#ff0000")
 
 image versus:
     yalign 0.5 xalign 0.5 zoom 1.25

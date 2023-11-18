@@ -74,7 +74,10 @@ style frame:
     padding gui.frame_borders.padding
     background Frame("gui/frame.png", gui.frame_borders, tile=gui.frame_tile)
 
-
+style buttonhover:
+    color "#000000"
+    hover_color "#f0f0f0"
+    font "fonts/pkmndp.ttf"
 
 ################################################################################
 ## In-game screens
@@ -377,11 +380,15 @@ screen database():
     for char in SortDatabase():
         $ person = persondex[char]
         $ pointvalue = person["Value"]
-        if (person["Named"] and pointvalue > 0):
+        if (person["Named"] and (pointvalue > 0 or GetMood(char) != 0)):
             $ xvalue = math.floor(yvalue/10.0)
             $ ybuffer = (yvalue % 10) * 105
             $ xbuffer = xvalue * -365
-            imagebutton idle "GUI/frame_battlestat.png" hover "GUI/frame_pbattlestat.png" xalign 1.0 ypos ybuffer xpos 1920 + xbuffer action NullAction() hovered Show("databasechar", Dissolve(0.5), char) unhovered Hide("databasechar", Dissolve(0.5)) at Transform(yzoom=0.8)
+            $ chartuple = getscenes([char])[0]
+            $ charname = chartuple[0]
+            $ hasscene = chartuple[1]
+    
+            imagebutton idle "GUI/frame_battlestat.png" hover "GUI/frame_pbattlestat.png" xalign 1.0 ypos ybuffer xpos 1920 + xbuffer action NullAction() hovered Show("databasechar", Dissolve(0.5), char) unhovered Hide("databasechar", Dissolve(0.5)) at [Transform(yzoom=0.8), (tintstrobe if hasscene else Transform(matrixcolor=TintMatrix("#fff")))]
             text char pos (1570 + xbuffer, 28 + ybuffer)
             $ gendersymbol = ""
             if ("Sex" in person.values()):
@@ -395,13 +402,14 @@ screen database():
 
             $ barcolor = getCharColor(char)
 
-            bar range GetEXPRequiredForLevel(char) value pointvalue pos (1565 + xbuffer, 65 + ybuffer) xmaximum 335 right_bar "#fff" left_bar barcolor
-            text ("EXP: " + str(pointvalue) + "/" + str(GetEXPRequiredForLevel(char))) color "#fff" pos (1575 + xbuffer, 65 + ybuffer) outlines [ (absolute(5), "#000", absolute(0), absolute(0)) ]
+            bar range GetEXPRequiredForLevel(char) value pointvalue pos (1565 + xbuffer, 65 + ybuffer) xmaximum 335 right_bar "#fff" left_bar (barcolor if pointvalue > 0 else "#fff")
+            text ("EXP: " + str(pointvalue) + ("/" + str(GetEXPRequiredForLevel(char)) if pointvalue > 0 else "")) color "#fff" pos (1575 + xbuffer, 65 + ybuffer) outlines [ (absolute(5), "#000", absolute(0), absolute(0)) ]
             $ yvalue += 1
 
-    textbutton "Back" action Return() xminimum 200 text_xalign .5 xalign 0.0 yalign 1.0 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
-
+    
     vbox:
+        textbutton "{b}Back{/b}" action Return() xminimum 250 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        null height 50
         textbutton "Lv. Sort" action SetVariable("socialsort", "lv") xminimum 250 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
         textbutton "ABC Sort" action SetVariable("socialsort", "abc") xminimum 250 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
         textbutton "Met Sort" action SetVariable("socialsort", None) xminimum 250 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
@@ -433,8 +441,8 @@ screen phoneinterface(targettype = None):
 
             $ barcolor = getCharColor(char)
 
-            bar range GetEXPRequiredForLevel(char) value value pos (1565 + xbuffer, 65 + ybuffer) xmaximum 335 right_bar "#fff" left_bar barcolor
-            text ("EXP: " + str(value) + "/" + str(GetEXPRequiredForLevel(char))) color "#fff" pos (1575 + xbuffer, 65 + ybuffer) outlines [ (absolute(5), "#000", absolute(0), absolute(0)) ]
+            bar range GetEXPRequiredForLevel(char) value value pos (1565 + xbuffer, 65 + ybuffer) xmaximum 335 right_bar "#fff" left_bar (barcolor if value > 0 else "#fff")
+            text "EXP: " + str(value) + (("/" + str(GetEXPRequiredForLevel(char))) if value > 0 else "") color "#fff" pos (1575 + xbuffer, 65 + ybuffer) outlines [ (absolute(5), "#000", absolute(0), absolute(0)) ]
             $ yvalue += 1
 
     if (peopleadded == 0):
@@ -451,13 +459,17 @@ screen databasechar(char):
     $ charimage = char.lower()
     if (char == "Professor Cherry"):
         $ charimage = "kris"
+    elif (char in ["Professor Oak", "Gramps"]):
+        $ charimage = "oak"
     elif (char == "Tia" and not IsBefore(17, 4, 2004)):
         $ charimage = "tia hat"
     elif (char == first_name):
         $ charimage = "red shadow noeyes frownmouth"
     add charimage xpos ((1 * 1.25 + 1) / 10.0) - 50 matrixcolor finalmatrix
     add charimage xpos ((1 * 1.25 + 1) / 10.0)
-    text "{size=80}{color=" + charcolor + "}" + char.replace(" ", "\n") + "\n{/color}{size=40}Lv." + str(valueceil) + ", EXP: " + str(value) xpos ((1 * 1.25 + 1) / 10.0) + (1 * 0.03 - 0.1) color "#fff" outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ] at Transform(rotate=-15)
+    if (usingmoods):
+        $ mood = GetMood(char)
+    text "{size=80}{color=" + charcolor + "}" + char.replace(" ", "\n") + "\n{/color}{size=40}Lv." + str(valueceil) + ", EXP: " + str(value) + ("\n{/color}{size=40}Mood: " + moodtoword(mood) + " (" + str(mood) + ")" if usingmoods and GetNature(char) != TrainerNature.Special else ("\n{/color}{size=40}Mood: Stable" if usingmoods and GetNature(char) == TrainerNature.Special else "")) xpos ((1 * 1.25 + 1) / 10.0) + (1 * 0.03 - 0.1) color "#fff" outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ] at Transform(rotate=-15)
 
     $ classstring = "None"
     for i, classtype in enumerate(persondex[char]["ClassesKnown"]):
@@ -478,20 +490,87 @@ screen databasechar(char):
         if charname in sceneconditions.keys() and GetRelationship(charname) in sceneconditions[charname].keys():
             $ posttext = sceneconditions[charname][GetRelationship(charname)]
     else:
-        $ posttext = "Ready!"
+        $ posttext = "{gradient2=3-#f00-#0f0-33-#0f0-#00f-33-#00f-#f00-33}{b}Ready!{/b}{/gradient2}"
 
+    $ height = 160
     if (posttext != ""):
-        text "Next Scene: " + posttext color "#fff" outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ] size 60 xcenter 0.25 ypos 0.7
+        $ height += 35
+    if (usingmoods and GetNature(char) != TrainerNature.Special):
+        $ height += 105 
+    add "images/GUI/readback.png" xysize (550, height) xpos 0.22 xanchor 0.5 yanchor 1.0 ypos 0.98
 
-    text "Relationship: " + GetRelationship(char) color "#fff" outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ] size 60 xcenter 0.25 ypos 0.75
-    text "Contact Info: " + ("Acquired" if persondex[char]["Contact"] else "Unacquired") color "#fff" outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ] size 60 xcenter 0.25 ypos 0.8
-    text "Known Classes: " + classstring color "#fff" outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ] size 60 xcenter 0.25 ypos 0.85
+    vbox:
+        xpos 0.22 xanchor 0.5 yanchor 1.0 ypos 0.95 spacing 5
+        if (posttext != ""):
+            text "{b}Next Scene:{/b} " + posttext color "#000" size 30
+
+        if (usingmoods and GetNature(char) != TrainerNature.Special):
+            $ bondchange = mooddict[max(min(10, GetMood(char)), -10)][GetNature(char)][0]
+            $ moodchange = mooddict[max(min(10, GetMood(char)), -10)][GetNature(char)][1]
+            text "{b}Current Mood:{/b} " + moodtoword(mood) + " (" + str(mood) + ")" color "#000" size 30
+            if (bondchange == 0 and moodchange == 0):
+                text "{b}Next Day:{/b} No Change" color "#000" size 30 
+            else:
+                text "{b}Next Day:{/b} " + ("+" if bondchange > -1 else "" ) + str(bondchange) + " Bond, " + ("+" if moodchange > -1 else "" ) + str(moodchange) + " Mood" color "#000" size 30 
+            text "{b}Nature:{/b} " + str(GetNature(char)) color "#000" size 30 
+        text "{b}Relationship:{/b} " + GetRelationship(char) color "#000" size 30
+        text "{b}Contact Info:{/b} " + ("Acquired" if persondex[char]["Contact"] else "Unacquired") color "#000" size 30
+        text "{b}Known Classes:{/b} " + classstring color "#000" size 30
+
+init python:
+    def moodtoword(points):
+        if (points <= -10):
+            return "Desolate"
+        elif (points == -9):
+            return "Heartbroken"
+        elif (points == -8):
+            return "Devastated"
+        elif (points == -7):
+            return "Sorrowful"
+        elif (points == -6):
+            return "Downtrodden"
+        elif (points == -5):
+            return "Depressed"
+        elif (points == -4):
+            return "Unhappy"
+        elif (points == -3):
+            return "Saddened"
+        elif (points == -2):
+            return "Irritated"
+        elif (points == -1):
+            return "Discontent"
+        elif (points == 0):
+            return "Mellow"
+        elif (points == 1):
+            return "Content"
+        elif (points == 2):
+            return "Serene"
+        elif (points == 3):
+            return "Happy"
+        elif (points == 4):
+            return "Joyful"
+        elif (points == 5):
+            return "Ecstatic"
+        elif (points == 6):
+            return "Exuberant"
+        elif (points == 7):
+            return "Jubilant"
+        elif (points == 8):
+            return "Delighted"
+        elif (points == 9):
+            return "Euphoric"
+        elif (points >= 10):
+            return "Blissful"
 
 screen traits():
     if (playercharacter == None):
         add "red happy" xpos 0.65 ypos 1.5
     elif (playercharacter == "Ethan"):
         add "ethan closedbrow talking2mouth" xpos 0.65 ypos 1.5
+    elif (playercharacter == "Blue"):
+        add "blue" xpos 0.65 ypos 1.5
+    elif (playercharacter == "Leaf"):
+        add "leaf flirt" xpos 0.65 ypos 1.4
     add "BG/Blank2.jpg" alpha 0.6
     $ plot_values = (personalstats["Charm"] + 15, personalstats["Knowledge"] + 15, personalstats["Courage"] + 15, personalstats["Wit"] + 15, personalstats["Patience"] + 15)
     add RadarChart(
@@ -541,9 +620,16 @@ screen partyviewer():
             hovered ([Show("mondata", Dissolve(0.5), pkmn), Show("nonbattlemoves", Dissolve(0.5), pkmn)] if pkmnlocked == -1 else NullAction()) 
             unhovered ([Hide("mondata", Dissolve(0.5)), Hide("nonbattlemoves", Dissolve(0.5)), Hide("movedata", Dissolve(0.5))] if pkmnlocked == -1 else Hide("movedata", Dissolve(0.5)))
         add "GUI/pokeballicon.webp" xanchor 1.0 xpos 1900 ypos 60 + 100 * i
-        add pkmn.GetImage() zoom 0.2 ypos 60 + 100 * i xanchor 1.0 xpos 1900 at (monochrome if max(pkmn.GetHealth(), pkmn.GetCaught()) <= 0 else None)
+        if (pkmn.GetImage() == "Pokemon/25.2.webp"):
+            add "Pokemon/25.2.webp" zoom 0.2 ypos 45 + 100 * i xanchor 1.0 xpos 1925 at (monochrome if max(pkmn.GetHealth(), pkmn.GetCaught()) <= 0 else None)
+            add "Pokemon/25.2-1.webp" zoom 0.2 ypos 45 + 100 * i xanchor 1.0 xpos 1925 matrixcolor TintMatrix(GetLiberaColor()) at (monochrome if max(pkmn.GetHealth(), pkmn.GetCaught()) <= 0 else None)
+            add "Pokemon/25.2-2.webp" zoom 0.2 ypos 45 + 100 * i xanchor 1.0 xpos 1925 matrixcolor TintMatrix(GetLiberaColor(False)) at (monochrome if max(pkmn.GetHealth(), pkmn.GetCaught()) <= 0 else None)
+        else:
+            add pkmn.GetImage() zoom 0.2 ypos 60 + 100 * i xanchor 1.0 xpos 1900 at (monochrome if max(pkmn.GetHealth(), pkmn.GetCaught()) <= 0 else None)
         if (pkmn.GetItem() != None):
             add "GFX/item.png" zoom 0.3 ypos 55 + 100 * i xanchor 1.0 xpos 1915
+        if (pkmn.GetForeverals() != []):
+            add "GFX/foreveral.png" zoom 0.3 ypos 100 + 100 * i xanchor 1.0 xpos 1915
         if (pkmn.GetHealthPercentage() < 1):
             $ maxhealth = pkmn.GetStat(Stats.Health, triggerAbilities=False)
             $ health = max(pkmn.GetHealth(), pkmn.GetCaught())
@@ -579,6 +665,373 @@ screen inventorywidget():
             action [SetVariable("activemon", None), SetVariable("activeitem", None), SetVariable("invoverwrite", None), ShowTransient("fieldinventory")]
             align (1.0, 1.0)
         add "GUI/backpack.webp" align (0.99, 0.99) 
+
+screen foreveralwidget():
+    if (len(foreveralinv) > 1):
+        imagebutton: 
+            idle "GUI/stats_frame.png" 
+            hover "GUI/stats_frame_hover.png" 
+            action [ShowTransient("foreveralinventory")]
+            align (1.0, 0.9)
+        add "GUI/foreveralsicon.png" align (0.99, 0.89)
+
+init python:
+    def GetForeveralMonname(foreveralname, changenidoran = True):
+        monname = foreveralname[:foreveralname.index(" ")]
+        if ("Mime Jr." in foreveralname):
+            monname = "Mime Jr."
+        elif ("Mr. Mime" in foreveralname):
+            monname = "Mr. Mime"
+        elif (monname == "Nidoran" and changenidoran):
+            monname += random.choice(["♀", "♂"])
+        return monname
+
+    def GetPlayerpartyForeverals():
+        partyforeverals = []
+        for mon in playerparty:
+            if mon.GetForeverals() != []:
+                partyforeverals.append(mon.GetForeverals())
+        return partyforeverals
+
+    def SortedForeverals():
+        global foreveraldex
+        if (foreveralsort == "National Dex"):
+            foreveraldex.sort(reverse = foreveralsortinverse, key=(lambda entry : pokedexlookupname(GetForeveralMonname(entry[0], True), DexMacros.Id)))
+        elif (foreveralsort == "Obtained"):
+            foreveraldex.sort(reverse = foreveralsortinverse, key=(lambda entry : (1000000 if entry[0] not in foreveralinv else foreveralinv.index(entry[0]))))
+        elif (foreveralsort == "Type"):
+            foreveraldex.sort(reverse = foreveralsortinverse, key=(lambda entry : pokedexlookupname(GetForeveralMonname(entry[0], True), DexMacros.Type1)))
+        elif (foreveralsort == "Category"):
+            foreveraldex.sort(reverse = foreveralsortinverse, key=(lambda entry : entry[0].replace(GetForeveralMonname(entry[0], False), "")))
+        elif (foreveralsort == "Alphabetical"):
+            foreveraldex.sort(reverse = foreveralsortinverse, key=(lambda entry : entry[0]))
+
+        return foreveraldex[foreveralpage * 30:foreveralpage * 30 + 30]
+
+label giveforeveral(foreveralname):
+    narrator "What would you like to do with this Foreveral?"
+
+    python:
+        hasmon = False
+        foreveralheld = False
+        monname = GetForeveralMonname(foreveralname, False)
+        eligiblemons = []
+        eligiblenames = []
+        for mon in playerparty:
+            if (pokedexlookup(mon.GetId(), DexMacros.Name) == monname or (monname == "Nidoran" and "Nidoran" in pokedexlookup(mon.GetId(), DexMacros.Name))):
+                eligiblemons.append(mon)
+                eligiblenames.append(mon.GetNickname())
+                hasmon = True
+
+        for mon in playerparty + box:
+            if (foreveralname in mon.GetForeverals()):
+                foreveralheld = True
+
+        preposition = "a"
+        if (monname[0] in ["A", "E", "I", "O", "U"]):
+            preposition += "n"
+
+    menu:
+        ">Read Description.":
+            if (not renpy.get_screen("decorativeforeveralinventory") and not renpy.get_screen("foreveralinventory")):
+                show screen decorativeforeveralinventory
+            call foreveraldata(foreveralname) from _call_foreveraldata
+
+        ">Use it on [preposition] [monname].":
+            if (not hasmon):
+                narrator "You do not have [preposition] [monname] with you right now."
+            else:
+                $ chosenmon = None
+                $ eligiblenames
+                menu:
+                    ">Use the [foreveralname] on [eligiblenames[0]].":
+                        $ chosenmon = eligiblemons[0]
+                    ">Use the [foreveralname] on [eligiblenames[1]]." if (len(eligiblemons) > 1):
+                        $ chosenmon = eligiblemons[1]
+                    ">Use the [foreveralname] on [eligiblenames[2]]." if (len(eligiblemons) > 2):
+                        $ chosenmon = eligiblemons[2]
+                    ">Use the [foreveralname] on [eligiblenames[3]]." if (len(eligiblemons) > 3):
+                        $ chosenmon = eligiblemons[3]
+                    ">Use the [foreveralname] on [eligiblenames[4]]." if (len(eligiblemons) > 4):
+                        $ chosenmon = eligiblemons[4]
+                    ">Use the [foreveralname] on [eligiblenames[5]]." if (len(eligiblemons) > 5):
+                        $ chosenmon = eligiblemons[5]
+                    "Nevermind.":
+                        pass
+                
+                if (chosenmon != None):
+                    python:
+                        movenames = []
+                        for moves in lookupforeveraldata(foreveralname, FVLMacros.FVLMoves):
+                            movenames.append(moves)
+                    menu:
+                        ">Teach [movenames[0]]." if len(movenames) > 0:
+                            $ chosenmon.LearnNewMove([(0, movenames[0])])
+
+                        ">Teach [movenames[1]]." if len(movenames) > 1:
+                            $ chosenmon.LearnNewMove([(0, movenames[1])])
+
+                        ">Teach [movenames[2]]." if len(movenames) > 2:
+                            $ chosenmon.LearnNewMove([(0, movenames[2])])
+
+                        ">Swap form." if ("Diveral" in foreveralname):
+                            python:
+                                forms = lookupforeveraldata(foreveralname, FVLMacros.FVLTypeData)
+                                if (chosenmon.GetId() == forms[0]):
+                                    chosenmon.ChangeForme(forms[1])
+                                else:
+                                    chosenmon.ChangeForme(forms[0])
+
+                        ">Remove form." if ("Diveral" in foreveralname):
+                            $ chosenmon.ChangeForme(None, revert=True)
+
+                        "Nevermind.":
+                            pass
+
+        ">Give it to [preposition] [monname].":
+            if (not hasmon):
+                narrator "You do not have [preposition] [monname] with you right now."
+            else:
+                $ chosenmon = None
+                $ eligiblenames
+                menu:
+                    ">Give the [foreveralname] to [eligiblenames[0]].":
+                        $ chosenmon = eligiblemons[0]
+                    ">Give the [foreveralname] to [eligiblenames[1]]." if (len(eligiblemons) > 1):
+                        $ chosenmon = eligiblemons[1]
+                    ">Give the [foreveralname] to [eligiblenames[2]]." if (len(eligiblemons) > 2):
+                        $ chosenmon = eligiblemons[2]
+                    ">Give the [foreveralname] to [eligiblenames[3]]." if (len(eligiblemons) > 3):
+                        $ chosenmon = eligiblemons[3]
+                    ">Give the [foreveralname] to [eligiblenames[4]]." if (len(eligiblemons) > 4):
+                        $ chosenmon = eligiblemons[4]
+                    ">Give the [foreveralname] to [eligiblenames[5]]." if (len(eligiblemons) > 5):
+                        $ chosenmon = eligiblemons[5]
+                    "Nevermind.":
+                        pass
+                
+                if (chosenmon != None):
+                    $ chosenname = chosenmon.GetNickname()
+                    if (chosenmon.GetForeverals() != []):
+                        $ chosenmonfvl = chosenmon.GetForeverals()[0]
+                        narrator "[chosenname] is currently holding the [chosenmonfvl]. Would you like to swap them?"
+
+                        menu:
+                            "Sure.":
+                                $ foreveralinv.append(chosenmonfvl)
+                                $ chosenmon.Foreverals = [foreveralname]
+                                $ foreveralinv.remove(foreveralname)
+                                $ chosenmon.RecalculateStats()
+
+                                narrator "You swapped the [chosenmonfvl] for the [foreveralname], and put the [chosenmonfvl] back in your bag."
+
+                            "Nevermind.":
+                                pass
+                    else:
+                        $ chosenmon.Foreverals = [foreveralname]
+                        $ foreveralinv.remove(foreveralname)
+                        $ chosenmon.RecalculateStats()
+                        
+                        narrator "You gave [chosenname] the [foreveralname]."
+
+        ">Use it on [pika_name].":
+            if (pikachuobj not in playerparty):
+                narrator "[pika_name] is not with you right now."
+            else:
+                python:
+                    movenames = []
+                    for moves in lookupforeveraldata(foreveralname, FVLMacros.FVLMoves):
+                        movenames.append(moves)
+                menu:
+                    ">Teach [movenames[0]]." if len(movenames) > 0:
+                        $ pikachuobj.LearnNewMove([(0, movenames[0])])
+
+                    ">Teach [movenames[1]]." if len(movenames) > 1:
+                        $ pikachuobj.LearnNewMove([(0, movenames[1])])
+
+                    ">Teach [movenames[2]]." if len(movenames) > 2:
+                        $ pikachuobj.LearnNewMove([(0, movenames[2])])
+
+                    ">Swap form." if ("Diveral" in foreveralname):
+                        if (pikachuobj.GetForeverals() != []):
+                            narrator "Diveralizing [pika_name] will de-sync all his current Foreverals, putting them back in your inventory. Is this okay?"
+                            menu:
+                                "Sure.":
+                                    python:
+                                        for fvl in pikachuobj.GetForeverals():
+                                            foreveralinv.append(fvl)
+                                        pikachuobj.Foreverals = []
+
+                                "Nevermind.":
+                                    jump endgiveforeveral
+
+                        python:
+                            forms = lookupforeveraldata(foreveralname, FVLMacros.FVLTypeData)
+                            if (pikachuobj.GetId() == forms[0]):
+                                pikachuobj.ChangeForme(forms[1])
+                            else:
+                                pikachuobj.ChangeForme(forms[0])
+
+                    ">Remove form." if ("Diveral" in foreveralname):
+                        $ pikachuobj.ChangeForme(None, revert=True)
+
+                    "Nevermind.":
+                        pass
+
+        ">Give it to [pika_name].":
+            if (pikachuobj not in playerparty):
+                narrator "[pika_name] is not with you right now."
+            else:
+                if (pikachuobj.GetFormeOverride() != None):
+                    narrator "[pika_name] is currently under the influence of a Diveral. Would you like to Undiveralize [pika_name] to give him the [foreveralname]?"
+                    menu:
+                        "Sure.":
+                            $ pikachuobj.ChangeForme(None, revert=True)
+                            $ pikachuobj.RecalculateStats()
+
+                        "Nevermind.":
+                            jump endgiveforeveral
+
+                if (pikachuobj.GetForeverals() != []):
+                    $ pikafvl = pikachuobj.GetForeverals()[0]
+                    narrator "[pika_name] is currently holding the [pikafvl]. Would you like to swap them?"
+                    menu:
+                        "Sure.":
+                            $ foreveralinv.append(pikafvl)
+                            $ pikachuobj.Foreverals = [foreveralname]
+                            $ foreveralinv.remove(foreveralname)
+                            $ pikachuobj.RecalculateStats()
+
+                            narrator "You swapped the [pikafvl] for the [foreveralname], and put the [pikafvl] back in your bag."
+
+                        "Nevermind.":
+                            pass
+                else:
+                    $ pikachuobj.Foreverals = [foreveralname]
+                    $ foreveralinv.remove(foreveralname)
+                    $ pikachuobj.RecalculateStats()
+
+                    narrator "You gave [pika_name] the [foreveralname]."
+
+        "Nevermind.":
+            pass
+
+    label endgiveforeveral:
+
+    hide screen decorativeforeveralinventory
+
+    $ renpy.show_screen("foreveralinventory", _transient=True)
+
+    return
+
+label foreveraldata(foreveralname, inbattle=False):
+    if (not inbattle and not renpy.get_screen("decorativeforeveralinventory") and not renpy.get_screen("foreveralinventory")):
+        show screen decorativeforeveralinventory
+
+    python:
+        explainingf = True
+        entry = None
+        for otherentry in foreveraldex:
+            if (otherentry[0] == foreveralname):
+                entry = otherentry
+                break
+        trainer = entry[1]
+        level = entry[2]
+        description = entry[6]
+        movesimparted = str(entry[5])
+        movesimparted = movesimparted.replace("[", "").replace("]", "").replace("'", "")
+        pokemontype = pokedexlookupname(GetForeveralMonname(foreveralname), DexMacros.Type1)
+
+    narrator "This is the [foreveralname]. [pika_name] will create it when you reach a bond level of [level] with [trainer]."
+    narrator "When equipped to an appropriate Pokemon, it has the following effect: [description]."
+    if ("Diveral" in foreveralname):
+        narrator "This Diveral can be used outside of battle to switch an appropriate Pokémon's form."
+    if (len(entry[5]) > 0):
+        narrator "When used on the appropriate Pokemon, it can teach the following move(s): [movesimparted]."
+    if (pokemontype != "Electric"):
+        narrator "When given to [pika_name], his Electric-type will be replaced by [pokemontype]."
+
+    if (not inbattle):
+        hide screen decorativeforeveralinventory
+
+        $ renpy.show_screen("foreveralinventory", _transient=True)
+        
+    $ explainingf = False
+    return
+
+screen foreveralinventory:
+    zorder 10
+    modal True
+    hbox:
+        align (0.5, 0.05)
+        textbutton "National Dex" action SetVariable("foreveralsort", "National Dex") xmaximum 224 text_size 40 text_xalign 0.5 text_color ("#000" if foreveralsort != "National Dex" else "#ff0000") text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "Obtained" action SetVariable("foreveralsort", "Obtained") xmaximum 224 text_size 40 text_xalign 0.5 text_color ("#000" if foreveralsort != "Obtained" else "#ff0000") text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "Type" action SetVariable("foreveralsort", "Type") xmaximum 224 text_size 40 text_xalign 0.5 text_color ("#000" if foreveralsort != "Type" else "#ff0000") text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "Category" action SetVariable("foreveralsort", "Category") xmaximum 223 text_size 40 text_xalign 0.5 text_color ("#000" if foreveralsort != "Category" else "#ff0000") text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "Alphabetical" action SetVariable("foreveralsort", "Alphabetical") xmaximum 223 text_size 40 text_xalign 0.5 text_color ("#000" if foreveralsort != "Alphabetical" else "#ff0000") text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+    textbutton "Page " + str(foreveralpage + 1) + "/" + str(math.floor(len(foreveraldex) / 30)) xmaximum 223 xpos 0.151 ypos .125 text_size 40 text_xalign 0.5 text_color "#000" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+    frame:
+        xpos 0.209
+        yanchor 0.0
+        ypos 0.124
+        xysize (1118, 545)
+        background "images/GUI/readback.png"
+        if (invoverwrite == None):
+            $ foreveralcount = 0
+            grid 3 10:
+                transpose True
+                for foreveral in SortedForeverals():
+                    $ foreveralcount += 1
+                    $ color = GetTypeColor(pokedexlookupname(GetForeveralMonname(foreveral[0], True), DexMacros.Type1))
+                    textbutton ("{gradient=" + color + "-" + ("#fff" if examinedf == foreveral else ("#2b2b2b" if foreveral[0] in foreveralinv else "#717171")) + "}" if foreveral[0] in foreveralinv else "") + foreveral[0][:5] + ("{/gradient}" if foreveral[0] in foreveralinv else "") + foreveral[0][5:]:
+                        text_size 30
+                        text_color ("#2b2b2b" if foreveral[0] in foreveralinv else "#717171") 
+                        action [SetVariable("examinedf", None), (Call("giveforeveral", foreveral[0], from_current=True) if foreveral[0] in foreveralinv else Call("foreveraldata", foreveral[0], from_current=True))]
+                        text_hover_color "#fff"
+                        hovered SetVariable("examinedf", foreveral)
+                        unhovered SetVariable("examinedf", None)
+                for x in range(30 - foreveralcount):
+                    null
+
+    hbox:
+        xalign .5 yalign 0.68
+        textbutton "<-" action (SetVariable("foreveralpage", foreveralpage - 1) if foreveralpage > 0 else SetVariable("foreveralpage", math.floor(len(foreveraldex) / 30 - 1))) xminimum 200 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "Back" action Hide("foreveralinventory") xminimum 200 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "->" action (SetVariable("foreveralpage", foreveralpage + 1) if foreveralpage < math.floor(len(foreveraldex) / 30 - 1) else SetVariable("foreveralpage", 0)) xminimum 200 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+
+screen decorativeforeveralinventory:
+    zorder 10
+    hbox:
+        align (0.5, 0.05)
+        textbutton "National Dex" xmaximum 224 text_size 40 text_xalign 0.5 text_color ("#000" if foreveralsort != "National Dex" else "#ff0000") style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "Obtained" xmaximum 224 text_size 40 text_xalign 0.5 text_color ("#000" if foreveralsort != "Obtained" else "#ff0000") text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "Type" xmaximum 224 text_size 40 text_xalign 0.5 text_color ("#000" if foreveralsort != "Type" else "#ff0000") text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "Category" xmaximum 223 text_size 40 text_xalign 0.5 text_color ("#000" if foreveralsort != "Category" else "#ff0000") text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "Alphabetical" xmaximum 223 text_size 40 text_xalign 0.5 text_color ("#000" if foreveralsort != "Alphabetical" else "#ff0000") text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+    textbutton "Page " + str(foreveralpage + 1) + "/" + str(math.floor(len(foreveraldex) / 30)) xmaximum 223 xpos 0.151 ypos .125 text_size 40 text_xalign 0.5 text_color "#000" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+    frame:
+        xpos 0.209
+        yanchor 0.0
+        ypos 0.124
+        xysize (1118, 545)
+        background "images/GUI/readback.png"
+        if (invoverwrite == None):
+            $ foreveralcount = 0
+            grid 3 10:
+                transpose True
+                for foreveral in SortedForeverals():
+                    $ foreveralcount += 1
+                    $ color = GetTypeColor(pokedexlookupname(GetForeveralMonname(foreveral[0], True), DexMacros.Type1))
+                    textbutton ("{gradient=" + color + "-" + ("#fff" if examinedf == foreveral else ("#2b2b2b" if foreveral[0] in foreveralinv else "#717171")) + "}" if foreveral[0] in foreveralinv else "") + foreveral[0][:5] + ("{/gradient}" if foreveral[0] in foreveralinv else "") + foreveral[0][5:] text_color ("#2b2b2b" if foreveral[0] in foreveralinv else "#717171") text_size 30
+                    #textbutton foreveral[0] text_color ("#2b2b2b" if foreveral[0] in foreveralinv else "#717171") text_hover_color "#fff"
+                for x in range(30 - foreveralcount):
+                    null
+
+    hbox:
+        xalign .5 yalign 0.68
+        textbutton "<-" xminimum 200 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "Back" xminimum 200 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+        textbutton "->" xminimum 200 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
 
 init python:
     def InvokeUseItem(partymon = None):
@@ -646,8 +1099,7 @@ screen fieldinventory(pickitem = False):
                 text invoverwrite color "#000000" size 40 xalign 0.5
                 null
                 textbutton "Yes, swap items." action Function(SwapItems) xsize 250 text_xalign .5 text_size 30 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"        
-                textbutton "Nevermind." action [SetVariable("activeitem", None), SetVariable("invoverwrite", None)] xsize 250 xfill True text_xalign .5 text_size 30 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"        
-        
+                textbutton "Nevermind." action [SetVariable("activeitem", None), SetVariable("invoverwrite", None)] xsize 250 xfill True text_xalign .5 text_size 30 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
         else:
             vbox:
                 xfill True
@@ -657,7 +1109,7 @@ screen fieldinventory(pickitem = False):
                 null
                 textbutton "Confirm" action [SetVariable("activemon", None), SetVariable("activeitem", None), SetVariable("invoverwrite", None)] xsize 250 text_xalign .5 text_size 30 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"        
 
-    textbutton "Back" action ([SetVariable("activemon", None), SetVariable("activeitem", None), SetVariable("invoverwrite", None), Hide("fieldinventory")] if not pickitem else Return("back")) xminimum 200 text_xalign .5 xalign .5 yalign 0.68 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
+    textbutton "Back" action ([SetVariable("activemon", None), SetVariable("activeitem", None), SetVariable("invoverwrite", None), (Hide("fieldinventory") if not pickitem else Return("back"))]) xminimum 200 text_xalign .5 xalign .5 yalign 0.68 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf"
 
 screen mondata(pkmn, showtip = True):
     add "gui/button/choice_idle_background.png" xalign .5 xzoom 1.5 yzoom 15
@@ -667,16 +1119,21 @@ screen mondata(pkmn, showtip = True):
     elif (pkmn.GetGender() == Genders.Female):
         $ gendersymbol = "{color=#ff00b7}♀"
     add pkmn.GetImage() yalign 0.25 xalign 0.5 alpha 0.2
+    if (pkmn.GetImage() == "Pokemon/25.2.webp"):
+        add "Pokemon/25.2-1.webp" yalign 0.25 xalign 0.5 alpha 0.2 matrixcolor TintMatrix(GetLiberaColor())
+        add "Pokemon/25.2-2.webp" yalign 0.25 xalign 0.5 alpha 0.2 matrixcolor TintMatrix(GetLiberaColor(False))
     $ nick = pkmn.GetNickname()
     text nick + " " + gendersymbol + ("" if nick == pokedexlookup(pkmn.GetId(), DexMacros.Name) else "\n{size=30}{color=#000}(" + pokedexlookup(pkmn.GetId(), DexMacros.Name) + "){/size}") xminimum 550 xpos .1 yalign .05 size (70 if len(nick) < 10 else 50)
     text "Lv. " + str(pkmn.GetLevel()) xminimum 550 xalign .5 ypos .03 size 50
     text "(Cap: " + str(math.floor(pkmn.GetLevelCap())) + ", Potential: " + str(pkmn.GetMaxLevel()) + ")" xalign .5 ypos .09 size 40
-    $ secondcolorstring = pokedexlookup(pkmn.GetId(), DexMacros.Type2)
-    if (secondcolorstring == None):
-        $ secondcolorstring = ""
-    else:
-        $ secondcolorstring = "{color=#fff}/{/color}{color=" + GetTypeColor(secondcolorstring) + "}" + secondcolorstring
-    text "{color=" + GetTypeColor(pokedexlookup(pkmn.GetId(), DexMacros.Type1)) + "}" + pokedexlookup(pkmn.GetId(), DexMacros.Type1) + secondcolorstring yalign .07 size 70 xanchor 1.0 xpos 0.85 outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ]
+    
+    $ typestring = ""
+    for element in pkmn.GetTypes():
+        if (typestring != ""):
+            $ typestring += "{color=#fff}/{/color}"
+        $ typestring += "{color=" + GetTypeColor(element) + "}" + element + "{/color}"
+
+    text typestring yalign .07 size 70 xanchor 1.0 xpos 0.85 outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ]
     
     grid 4 7:
         xalign .5
@@ -725,22 +1182,49 @@ screen mondata(pkmn, showtip = True):
             if (pkmn.HasStatus(statustype)):
                 $ status = statustype
     
-    text "Status: " + status.title() xminimum 300 xalign .15 yalign .48 size 40
-    if (pkmn.GetItem() == None):
-        text "Item: None" xminimum 300 xalign .4 yalign .48 size 40
-    else:
-        textbutton "Item: " + pkmn.GetItem():
-            xminimum 300 text_xalign .5 xalign .4 yalign .48 
-            ymaximum 60 text_size 40 text_color "#000" text_hover_color "#f0f" 
-            style "menu_choice_button" text_font "fonts/pkmndp.ttf" 
-            action [Function(RemoveItem, pkmn)]
+    hbox:
+        yalign .48
+        xalign .5
+        spacing 30
+        text "Status: " + status.title() xminimum 300 size 40 yalign .5
+        if (pkmn.GetItem() == None):
+            text "Item: None" xminimum 300 size 40 yalign .5
+        else:
+            textbutton "Item: " + pkmn.GetItem():
+                xminimum 300 text_xalign .5
+                ymaximum 60 text_size 40 text_color "#000" text_hover_color "#f0f" 
+                style "menu_choice_button" text_font "fonts/pkmndp.ttf" 
+                action [Function(RemoveItem, pkmn)]
 
-    text "Nature: " + NatureToString(pkmn.GetNature()) xminimum 300 xalign .65 yalign .48 size 40
-    text "Ability: " + pkmn.GetAbility() xminimum 300 xalign .9 yalign .48 size 40
+        text "Nature: " + NatureToString(pkmn.GetNature()) xminimum 300 size 40 yalign .5
+        $ fvlability = False
+        for fvl in pkmn.GetForeverals():
+            if (lookupforeveraldata(fvl, FVLMacros.FVLType) == ForeveralTypes.AddAbility):
+                $ fvlability = True
+        if (not fvlability):
+            text "Ability: " + pkmn.GetAbility() xminimum 300 size 40 yalign .5
+        else:
+            hbox:
+                text "Ability: " xminimum 300 size 40 yalign .5
+                vbox:
+                    text pkmn.GetAbility() xminimum 300 size 40 yalign .5
+                    for fvl in pkmn.GetForeverals():
+                        if (lookupforeveraldata(fvl, FVLMacros.FVLType) == ForeveralTypes.AddAbility):
+                            for ability in lookupforeveraldata(fvl, FVLMacros.FVLTypeData):
+                                text "(" + ability + ")" xminimum 300 size 40 yalign .5
+        if (usingforeverals):
+            if (pkmn.GetForeverals() == []):
+                text "Foreveral: None" xminimum 300 size 40 yalign .5
+            else:
+                textbutton "Foreveral: " + pkmn.GetForeverals()[0]:
+                    xminimum 300 text_xalign .5
+                    ymaximum 60 text_size 40 text_color "#000" text_hover_color "#f0f" 
+                    style "menu_choice_button" text_font "fonts/pkmndp.ttf" 
+                    action [Function(RemoveForeverals, pkmn)]
     if (showtip):
         text ("(Click on {} to lock screen and switch Pokémon.)" if pkmnlocked == -1 else "{{u}}(Click on {} to unlock screen, or click on another Pokémon to switch positions.){{/u}}").format(pkmn.GetNickname()) xminimum 300 xalign .5 yalign .55 size 40
 
-screen nonbattlemoves(pkmn, newmove=False, tooltips = True):
+screen nonbattlemoves(pkmn, newmove=False, tooltips = True, ismodal=False):
     zorder 5
     grid len(pkmn.GetMoves()) 1:
         xalign .5
@@ -752,6 +1236,21 @@ screen nonbattlemoves(pkmn, newmove=False, tooltips = True):
                 text_font "fonts/pkmndp.ttf" 
                 hovered ([Show("movedata", Dissolve(0.5), move), Hide("mondata", Dissolve(0.5))] if tooltips else NullAction())
                 unhovered ([Hide("movedata", Dissolve(0.5)), Show("mondata", Dissolve(0.5), pkmn)] if tooltips else NullAction())
+
+screen modalnonbattlemoves(pkmn, newmove=False, tooltips = True):
+    modal True
+    zorder 5
+    grid len(pkmn.GetMoves()) 1:
+        xalign .5
+        yalign (.65 if tooltips else .55)
+        for move in pkmn.GetMoves():
+            textbutton move.Name: 
+                action ([Hide("movedata", Dissolve(0.5)), Hide("nonbattlemoves", Dissolve(0.5)), Return(move)] if newmove else NullAction()) 
+                xminimum 350 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" 
+                text_font "fonts/pkmndp.ttf" 
+                hovered ([Show("movedata", Dissolve(0.5), move), Hide("mondata", Dissolve(0.5))] if tooltips else NullAction())
+                unhovered ([Hide("movedata", Dissolve(0.5)), Show("mondata", Dissolve(0.5), pkmn)] if tooltips else NullAction())
+
 
 ## Main Menu screen ############################################################
 ##
@@ -907,6 +1406,8 @@ init python:
         else:
             savename = timeOfDay
         save_name = renpy.invoke_in_new_context(renpy.input, "Type a name for the save.", default=savename, length=16, exclude="{}[[]%<>",)
+        if (save_name.strip() == ""):
+            save_name = timeOfDay
         save_name = "{}, {} {}\n{}".format(getRWDay(0), str(calendar.month_name[calDate.month]), getRDay(0), "{size=30}" + save_name + "{/size}")
         
 screen save():
@@ -916,13 +1417,19 @@ screen save():
         hover "imagemaps/Save_Load_Hover.png"
         selected_idle "imagemaps/Save_Load_Selected.png"
         selected_hover "imagemaps/Save_Load_Hover.png"
-     
-        hotspot (34, 953, 38, 38) clicked FilePage(1)
-        hotspot (83, 953, 38, 38) clicked FilePage(2)
+        if int(persistent._file_page) > 6:
+            hotspot (6, 997, 38, 38) clicked SetVariable("persistent._file_page", str(int(persistent._file_page) - 5))
+        else:
+            hotspot (6, 997, 38, 38) clicked SetVariable("persistent._file_page", "1")
+
+        hotspot (53, 997, 38, 38) clicked If(int(persistent._file_page) > 1, SetVariable("persistent._file_page", str(int(persistent._file_page) - 1)))
+        hotspot (33, 953, 38, 38) clicked FilePage(1)
+        hotspot (82, 953, 38, 38) clicked FilePage(2)
         hotspot (132, 953, 38, 38) clicked FilePage(3)
-        hotspot (182, 953, 38, 38) clicked FilePage(4)
-        hotspot (230, 953, 38, 38) clicked FilePage(5)
-        
+        hotspot (181, 953, 38, 38) clicked FilePage(4)
+        hotspot (207, 997, 38, 38) clicked FilePage(int(persistent._file_page) + 1), SetVariable("persistent._file_page", str(int(persistent._file_page) + 1))
+        hotspot (254, 997, 38, 38) clicked FilePage(int(persistent._file_page) + 5), SetVariable("persistent._file_page", str(int(persistent._file_page) + 5))
+
         hotspot (20, 84, 261, 150) clicked ([Function(RenameFile, 1), FileSave(1)] if not inbattle else Function(RenameFile, 1)):
             use load_save_slot(number=1)
         hotspot (20, 255, 261, 150) clicked ([Function(RenameFile, 2), FileSave(2)] if not inbattle else Function(RenameFile, 2)):
@@ -934,7 +1441,11 @@ screen save():
         hotspot (20, 794, 261, 150) clicked ([Function(RenameFile, 5), FileSave(5)] if not inbattle else Function(RenameFile, 5)):
             use load_save_slot(number=5)
 
-        hotspot (101, 1018, 86, 31) action Hide("save", transition=dissolve)
+        hotspot (101, 1018, 86, 31) action Hide("save", transition=dissolve), Hide("extra_load")
+        $ str_page = "Pg. " + persistent._file_page
+        text str_page xpos 200 ypos 1042
+
+        hotspot (33, 1040, 40, 40) action Show("extra_load")
 
 screen load():
     
@@ -950,13 +1461,20 @@ screen load():
         selected_idle "imagemaps/Save_Load_Selected.png"
         selected_hover "imagemaps/Save_Load_Hover.png"
         cache False
-     
-        hotspot (34, 953, 38, 38) clicked FilePage(1)
-        hotspot (83, 953, 38, 38) clicked FilePage(2)
-        hotspot (132, 953, 38, 38) clicked FilePage(3)
-        hotspot (182, 953, 38, 38) clicked FilePage(4)
-        hotspot (230, 953, 38, 38) clicked FilePage(5)
+        if int(persistent._file_page) > 6:
+            hotspot (6, 997, 38, 38) clicked SetVariable("persistent._file_page", str(int(persistent._file_page) - 5))
+        else:
+            hotspot (6, 997, 38, 38) clicked SetVariable("persistent._file_page", "1")
         
+        hotspot (53, 997, 38, 38) clicked If(int(persistent._file_page) > 1, SetVariable("persistent._file_page", str(int(persistent._file_page) - 1)))
+        hotspot (33, 953, 38, 38) clicked FilePage(1)
+        hotspot (82, 953, 38, 38) clicked FilePage(2)
+        hotspot (132, 953, 38, 38) clicked FilePage(3)
+        hotspot (181, 953, 38, 38) clicked FilePage(4)
+        hotspot (230, 953, 38, 38) clicked FilePage(5)
+        hotspot (207, 997, 38, 38) clicked FilePage(int(persistent._file_page) + 1), SetVariable("persistent._file_page", str(int(persistent._file_page) + 1))
+        hotspot (254, 997, 38, 38) clicked FilePage(int(persistent._file_page) + 5), SetVariable("persistent._file_page", str(int(persistent._file_page) + 5))
+
         hotspot (20, 84, 261, 150) clicked FileLoad(1):
             use load_save_slot(number=1)
         hotspot (20, 255, 261, 150) clicked FileLoad(2):
@@ -968,7 +1486,34 @@ screen load():
         hotspot (20, 794, 261, 150) clicked FileLoad(5):
             use load_save_slot(number=5)
             
-        hotspot (101, 1018, 86, 31) action Hide("load", transition=dissolve)
+        hotspot (101, 1018, 86, 31) action Hide("load", transition=dissolve), Hide("extra_load")
+        $ str_page = "Pg. " + persistent._file_page
+        text str_page xpos 200 ypos 1042
+
+        hotspot (33, 1040, 40, 40) action Show("extra_load")
+
+screen extra_load:
+    frame:
+        #xysize (300,200) 
+        style "menu_choice_button"
+        xpos 0.38
+        ypos 0.9
+        #xmaximum .4
+        vbox:
+            hbox:
+                text "{size=+2}Travel to page:"
+                button:
+                    id "input_1"
+                    xysize (250,25)
+                    action NullAction()
+                    add Input(hover_color="#808080",size=40, color="#000", default=int(persistent._file_page), changed=file_page_func, length=10, button=renpy.get_widget("extra_load","input_1")) yalign 0 
+            hbox:
+                textbutton "{b}Enter{/b}" style "buttonhover" action Hide("extra_load")
+
+init python:
+    def file_page_func(newstring):
+        if newstring.isdigit() and int(newstring) > 0:
+            persistent._file_page = newstring
 
 screen load_save_slot:
     $ file_text = "{color=#ffffff}{font=fonts/pkmndp.ttf}{size=22}%s\n\n\n%s{/size}{/font}{/color}" % (FileSaveName(number),
@@ -1481,11 +2026,23 @@ screen battleui():
         for i, playermon in enumerate(FriendlyBattlers()):
             $ originali = i
             $ i = len(FriendlyBattlers()) - i - 1
-            if playermon.HasAbility("Freelectric", False):
+            $ isprojecting = playermon.GetFormeOverride() != None and playermon.GetImage() == "Pokemon/25.2.webp"
+
+            if (playermon.GetImage() != "Pokemon/25.2.webp" and playermon.GetImage() != "Pokemon/25.webp"):
+                add playermon.GetImage() at (hovering if originali == BattlerIndex and len(FriendlyBattlers()) > 1 else None) xpos 250 * i + 200 * (len(FriendlyBattlers()) == 1) + 100 * (len(FriendlyBattlers()) == 2) * i + 50 * (len(FriendlyBattlers()) == 2) yanchor 1.0 ypos 1.0 - .15 * i xzoom -1.0 / (i * 0.25 + 1) yzoom 1.0 / (i * 0.25 + 1) zoom (0.8 if isprojecting else 1.0)
+            elif (playermon.HasAbility("Freelectric", False) and len(freelectricphases) < 2):
                 add "images/expressions/pikachu/pikachu_face_angry.webp" at (hovering if originali == BattlerIndex and len(FriendlyBattlers()) > 1 else None) xpos 250 * i + 200 * (len(FriendlyBattlers()) == 1) + 100 * (len(FriendlyBattlers()) == 2) * i + 50 * (len(FriendlyBattlers()) == 2) yanchor 1.0 ypos 1.0 - .15 * i xzoom 1.0 / (i * 0.25 + 1) yzoom 1.0 / (i * 0.25 + 1)
             else:
-                add playermon.GetImage() at (hovering if originali == BattlerIndex and len(FriendlyBattlers()) > 1 else None) xpos 250 * i + 200 * (len(FriendlyBattlers()) == 1) + 100 * (len(FriendlyBattlers()) == 2) * i + 50 * (len(FriendlyBattlers()) == 2) yanchor 1.0 ypos 1.0 - .15 * i xzoom -1.0 / (i * 0.25 + 1) yzoom 1.0 / (i * 0.25 + 1)
-        
+                add "Pokemon/25.2-4.webp" at (hovering if originali == BattlerIndex and len(FriendlyBattlers()) > 1 else None) xpos (75 if isprojecting else 0) + 250 * i + 200 * (len(FriendlyBattlers()) == 1) + 100 * (len(FriendlyBattlers()) == 2) * i + 50 * (len(FriendlyBattlers()) == 2) yanchor 1.0 ypos 1.0 - .15 * i xzoom -1.0 / (i * 0.25 + 1) yzoom 1.0 / (i * 0.25 + 1) zoom (0.8 if isprojecting else 1.0) 
+                add "Pokemon/25.2-1.webp" at (hovering if originali == BattlerIndex and len(FriendlyBattlers()) > 1 else None) matrixcolor TintMatrix(GetLiberaColor()) xpos (75 if isprojecting else 0) + 250 * i + 200 * (len(FriendlyBattlers()) == 1) + 100 * (len(FriendlyBattlers()) == 2) * i + 50 * (len(FriendlyBattlers()) == 2) yanchor 1.0 ypos 1.0 - .15 * i xzoom -1.0 / (i * 0.25 + 1) yzoom 1.0 / (i * 0.25 + 1) zoom (0.8 if isprojecting else 1.0)
+
+                if (isprojecting):
+                    add "Pokemon/{}.webp".format(playermon.GetId()) at (hoverfloat) matrixcolor SaturationMatrix(2.0) alpha 0.8 xpos -75 + 250 * i + 200 * (len(FriendlyBattlers()) == 1) + 100 * (len(FriendlyBattlers()) == 2) * i + 50 * (len(FriendlyBattlers()) == 2) ypos -0.05 + 1.0 - .15 * i xzoom -1.0 / (i * 0.25 + 1) yzoom 1.0 / (i * 0.25 + 1)
+
+                add "Pokemon/25.2-3.webp" at (hovering if originali == BattlerIndex and len(FriendlyBattlers()) > 1 else None) xpos (75 if isprojecting else 0) + 250 * i + 200 * (len(FriendlyBattlers()) == 1) + 100 * (len(FriendlyBattlers()) == 2) * i + 50 * (len(FriendlyBattlers()) == 2) yanchor 1.0 ypos 1.0 - .15 * i xzoom -1.0 / (i * 0.25 + 1) yzoom 1.0 / (i * 0.25 + 1) zoom (0.8 if isprojecting else 1.0)
+                add "Pokemon/25.2-5.webp" at (hovering if originali == BattlerIndex and len(FriendlyBattlers()) > 1 else None) matrixcolor TintMatrix(GetLiberaColor()) xpos (75 if isprojecting else 0) + 250 * i + 200 * (len(FriendlyBattlers()) == 1) + 100 * (len(FriendlyBattlers()) == 2) * i + 50 * (len(FriendlyBattlers()) == 2) yanchor 1.0 ypos 1.0 - .15 * i xzoom -1.0 / (i * 0.25 + 1) yzoom 1.0 / (i * 0.25 + 1) zoom (0.8 if isprojecting else 1.0)
+                add "Pokemon/25.2-2.webp" at (hovering if originali == BattlerIndex and len(FriendlyBattlers()) > 1 else None) matrixcolor TintMatrix(GetLiberaColor(False)) xpos (75 if isprojecting else 0) + 250 * i + 200 * (len(FriendlyBattlers()) == 1) + 100 * (len(FriendlyBattlers()) == 2) * i + 50 * (len(FriendlyBattlers()) == 2) yanchor 1.0 ypos 1.0 - .15 * i xzoom -1.0 / (i * 0.25 + 1) yzoom 1.0 / (i * 0.25 + 1) zoom (0.8 if isprojecting else 1.0)
+
         for i, enemymon in enumerate(EnemyBattlers()):
             $ i = len(EnemyBattlers()) - i - 1
             add enemymon.GetImage() xanchor 1.0 xpos 1920 - (250 * i + 200 * (len(EnemyBattlers()) == 1) + 100 * (len(EnemyBattlers()) == 2) * i + 50 * (len(EnemyBattlers()) == 2)) yanchor 1.0 ypos 1.0 - .15 * i zoom 1.0 / (i * 0.25 + 1)
@@ -1518,7 +2075,14 @@ screen battleui():
             $ maxhealth = mon.GetStat(Stats.Health)
             $ ybuffer = i * 106 + ylevels * 35
             add "GUI/frame_pbattlestat.png" ypos ybuffer yzoom .8 xanchor .03
-            text mon.GetNickname() pos (17, 30 + ybuffer)
+            if (mon.GetForeverals() != []):
+                imagebutton:
+                    idle Transform("gfx/foreveral.png", matrixcolor=InvertMatrix(0), zoom=0.2)
+                    hover Transform("gfx/foreveral.png", matrixcolor=InvertMatrix(), zoom=0.2)
+                    ypos ybuffer + 30
+                    xpos 0.115
+                    action (Hide("stats"), Call("foreveraldata", mon.GetForeverals()[0], inbattle=True, from_current=True) if not explainingf else NullAction())
+            text mon.GetNickname() pos (17, 30 + ybuffer) size 35 - (1.5 * max(0, (len(mon.GetNickname()) - 10)))
             $ gendersymbol = ""
             if (mon.GetGender() == Genders.Male):
                 $ gendersymbol = "{color=#2b00ff}♂"
@@ -1535,10 +2099,18 @@ screen battleui():
             bar range maxhealth value health pos (12, 65 + ybuffer) xmaximum 335 right_bar "#fff" left_bar barcolor
             text (str(health) + "/" + str(maxhealth)) color "#fff" pos (17, 65 + ybuffer) outlines [ (absolute(5), "#000", absolute(0), absolute(0)) ]
 
+            if (mon.IsTerad()):
+                add "GUI/frame_pbattlestat.png" xanchor .1 ypos (i + 1) * 105 + 10 + ylevels * 35 at Transform(yzoom=0.3)
+                text "{gradient2=3-#f00-#0f0-11-#0f0-#00f-11-#00f-#f00-11}Terastalized {/gradient2}" + mon.GetTeraType() xpos 15 ypos (i + 1) * 105 + 10 + ylevels * 35 + 8
+                $ ylevels += 1
+
             for status in mon.GetStatusKeys():
                 if (status[0] != "."):
                     add "GUI/frame_pbattlestat.png" xanchor .1 ypos (i + 1) * 105 + 10 + ylevels * 35 at Transform(yzoom=0.3)
-                    text status.title() xpos 15 ypos (i + 1) * 105 + 10 + ylevels * 35 + 8
+                    if (status in ["diveralized", "mega evolved", "minigigamaxed"]):
+                        text "{gradient2=3-#f00-#0f0-11-#0f0-#00f-11-#00f-#f00-11}" + status.title() + "{/gradient2}" xpos 15 ypos (i + 1) * 105 + 10 + ylevels * 35 + 8
+                    else:
+                        text status.title() xpos 15 ypos (i + 1) * 105 + 10 + ylevels * 35 + 8
                     $ ylevels += 1
 
             for change in mon.GetAllStatChanges().keys():
@@ -1560,7 +2132,7 @@ screen battleui():
             $ maxhealth = mon.GetStat(Stats.Health)
             $ ybuffer = i * 106 + ylevels * 35
             add "GUI/frame_pbattlestat.png" ypos ybuffer yzoom .8 xanchor .97 xpos 1.0
-            text mon.GetNickname() pos (1920-345, 30 + ybuffer)
+            text mon.GetNickname() pos (1920-345, 30 + ybuffer) size 35 - (1.5 * max(0, (len(mon.GetNickname()) - 10)))
             $ gendersymbol = ""
             if (mon.GetGender() == Genders.Male):
                 $ gendersymbol = "{color=#2b00ff}♂"
@@ -1577,10 +2149,18 @@ screen battleui():
             bar range maxhealth value health pos (1920-12, 65 + ybuffer) xmaximum 335 right_bar barcolor left_bar "#fff" bar_invert True xanchor 1.0
             #text (str(health) + "/" + str(maxhealth)) color "#fff" pos (1920-17, 65 + ybuffer) outlines [ (absolute(5), "#000", absolute(0), absolute(0)) ] xanchor 1.0
 
+            if (mon.IsTerad()):
+                add "GUI/frame_pbattlestat.png" xanchor .9 xpos 1.0 ypos (i + 1) * 105 + 10 + ylevels * 35 at Transform(yzoom=0.3)
+                text "{gradient2=3-#f00-#0f0-11-#0f0-#00f-11-#00f-#f00-11}Terastalized {/gradient2}" + mon.GetTeraType() xpos 1920-15 xanchor 1.0 ypos (i + 1) * 105 + 10 + ylevels * 35 + 8
+                $ ylevels += 1
+
             for status in mon.GetStatusKeys():
                 if (status[0] != "."):
                     add "GUI/frame_pbattlestat.png" xanchor .9 xpos 1.0 ypos (i + 1) * 105 + 10 + ylevels * 35 at Transform(yzoom=0.3)
-                    text status.title() xpos 1920-15 xanchor 1.0 ypos (i + 1) * 105 + 10 + ylevels * 35 + 8
+                    if (status in ["diveralized", "mega evolved", "minigigamaxed"]):
+                        text "{gradient2=3-#f00-#0f0-11-#0f0-#00f-11-#00f-#f00-11}" + status.title() + "{/gradient2}" xpos 1920-15 xanchor 1.0 ypos (i + 1) * 105 + 10 + ylevels * 35 + 8
+                    else:
+                        text status.title() xpos 1920-15 xanchor 1.0 ypos (i + 1) * 105 + 10 + ylevels * 35 + 8
                     $ ylevels += 1
 
             for change in mon.GetAllStatChanges().keys():
@@ -1595,22 +2175,50 @@ screen battleui():
             text effect.title() xpos 1920-15 xanchor 1.0 ypos yceiling + 8
             $ ylevels += 1
 
-screen battle():
+define longtext = "{gradient2=3-#f00-#0f0-11-#0f0-#00f-11-#00f-#f00-11}{size=60} Terastalize! {/size}{/gradient2}"
+define shorttext = "Terastalize"
+define longlibtext = "{gradient2=3-#f00-#0f0-11-#0f0-#00f-11-#00f-#f00-11}{size=60} Liberize! {/size}{/gradient2}"
+define longdivtext = "{gradient2=3-#f00-#0f0-11-#0f0-#00f-11-#00f-#f00-11}{size=60} Diveralize! {/size}{/gradient2}"
+define longmegatext = "{gradient2=3-#f00-#0f0-11-#0f0-#00f-11-#00f-#f00-11}{size=60} Mega Evolve! {/size}{/gradient2}"
+define longminigigatext = "{gradient2=3-#f00-#0f0-11-#0f0-#00f-11-#00f-#f00-11}{size=60} Minigigamax! {/size}{/gradient2}"
+
+screen battle(currentMon=None):
     if (not renpy.get_screen("battleui")):
         use battleui()
 
-    grid 1 5:
+    $ showteraoption = False
+    if (currentMon != None and "Tera Orb" in inventory.keys()):
+        $ showteraoption = True
+        for allymon in currentMon.GetTrainer().GetTeam():
+            if (allymon.IsTerad() and (allymon != currentMon or allymon == currentMon and allymon.GetTerastalized() != Turn)):
+                $ showteraoption = False
+
+    $ hasdiveral = False
+    if (currentMon != None):
+        for fvl in currentMon.GetForeverals():
+            if (lookupforeveraldata(fvl, FVLMacros.FVLType) == ForeveralTypes.FormSwap):
+                $ hasdiveral = True
+
+    vbox:
         xalign .5
         yalign .5
+        if (currentMon != None):
+            if (showteraoption):
+                textbutton "[terabuttontext]" action Return(value='tera') text_font "fonts/pkmndp.ttf" xmaximum 360 text_xalign .5 text_size 60 text_color "#4b4b4b" top_padding 17 style "menu_choice_button" hovered SetVariable('terabuttontext', (longtext if not currentMon.IsTerad() else shorttext)) unhovered SetVariable('terabuttontext', (shorttext if not currentMon.IsTerad() else longtext))
+            if (movesdodged.count("Dragon Pulse") >= 4 and dawnbattle):
+                textbutton "[longlibtext]" action Return(value='lib') text_font "fonts/pkmndp.ttf" xmaximum 360 text_xalign .5 text_size 60 text_color "#4b4b4b" top_padding 17 style "menu_choice_button"
+            if (hasdiveral and GimmickCost > 0):
+                textbutton "[longdivtext]" action Return(value='div') text_font "fonts/pkmndp.ttf" xmaximum 360 text_xalign .5 text_size 60 text_color "#4b4b4b" top_padding 17 style "menu_choice_button"
+            if (currentMon.GetItem() != None and currentMon.GetItem()[-3:] == "ite" and GimmickCost > 0):
+                textbutton "[longmegatext]" action Return(value='mega') text_font "fonts/pkmndp.ttf" xmaximum 360 text_xalign .5 text_size 60 text_color "#4b4b4b" top_padding 17 style "menu_choice_button"
+            if (currentMon.GetItem() != None and "Minigiga" in currentMon.GetItem() and GimmickCost > 0):
+                textbutton "[longminigigatext]" action Return(value='giga') text_font "fonts/pkmndp.ttf" xmaximum 360 text_xalign .5 text_size 60 text_color "#4b4b4b" top_padding 17 style "menu_choice_button"
         textbutton " Fight " action Return(value='fight') text_font "fonts/pkmndp.ttf" xmaximum 270 text_xalign .5 text_size 60 text_color "#9b5151" text_hover_color "#d03b3d" style "menu_choice_button"
         textbutton "  Bag  " action Return(value='bag') text_font "fonts/pkmndp.ttf" xmaximum 270 text_xalign .5 text_size 60 text_color "#826926" text_hover_color "#c98022" style "menu_choice_button"
         textbutton "Pokémon" action Return(value='pokemon') text_font "fonts/pkmndp.ttf" xmaximum 270 text_xalign .5 text_size 60 text_color "#437128" text_hover_color "#459426" style "menu_choice_button"
         textbutton "  Run  " action Return(value='run') text_font "fonts/pkmndp.ttf" xmaximum 270 text_xalign .5 text_size 60 text_color "#295272" text_hover_color "#256799" style "menu_choice_button"
         if (len(CurrentActions) > 0):
             textbutton " Back " action Return(value='back') text_font "fonts/pkmndp.ttf" xmaximum 270 text_xalign .5 text_size 60 text_color "#000" text_hover_color "#f0f" style "menu_choice_button"
-        else:
-            null
-
 
 screen choosetarget(move, attacker):
     if (not renpy.get_screen("battleui")):
@@ -1658,7 +2266,7 @@ screen choosetarget(move, attacker):
                 $ istarget = mon in GetTargets(attacker, range)
                 $ returnable = GetTargets(attacker, range) if groupselection else [mon]
                 if (mon != None):
-                    textbutton mon.GetNickname() action (Return(returnable) if istarget else NullAction()) text_font "fonts/pkmndp.ttf" xmaximum 340 text_xalign .5 text_size 60 text_color ("#000" if istarget else "#616161") style "menu_choice_button"
+                    textbutton mon.GetNickname() action (Return(returnable) if istarget else NullAction()) text_font "fonts/pkmndp.ttf" xmaximum 340 text_xalign .5 text_size (60 if len(mon.GetNickname()) < 11 else 50 - (2 * (len(mon.GetNickname()) - 10))) text_color ("#000" if istarget else "#616161") style "menu_choice_button"
 
     vbox:
         align (0.5, 0.5)
@@ -1668,7 +2276,7 @@ screen choosetarget(move, attacker):
                 $ istarget = mon in GetTargets(attacker, range)
                 $ returnable = GetTargets(attacker, range) if groupselection else [mon] 
                 if (mon != None):
-                    textbutton mon.GetNickname() action (Return(returnable) if istarget else NullAction()) text_font "fonts/pkmndp.ttf" xmaximum 340 text_xalign .5 text_size 60 text_color ("#000" if istarget else "#616161") style "menu_choice_button"
+                    textbutton mon.GetNickname() action (Return(returnable) if istarget else NullAction()) text_font "fonts/pkmndp.ttf" xmaximum 340 text_xalign .5 text_size (60 if len(mon.GetNickname()) < 11 else 50 - (2 * (len(mon.GetNickname()) - 10))) text_color ("#000" if istarget else "#616161") style "menu_choice_button"
     grid 1 1:
         xalign .5
         ypos .658
@@ -1736,68 +2344,108 @@ screen stats(pkmn):
     if (not renpy.get_screen("battleui")):
         use battleui()
     
-    add "gui/button/choice_idle_background.png" xalign .5 xzoom 1.5 yzoom 15 ypos -.05
+    add "gui/button/choice_idle_background.png" xalign .5 xzoom 1.5 yzoom 15
     $ gendersymbol = ""
     if (pkmn.GetGender() == Genders.Male):
         $ gendersymbol = "{color=#2b00ff}♂"
     elif (pkmn.GetGender() == Genders.Female):
         $ gendersymbol = "{color=#ff00b7}♀"
     add pkmn.GetImage() yalign 0.25 xalign 0.5 alpha 0.2
+    if (pkmn.GetImage() == "Pokemon/25.2.webp"):
+        add "Pokemon/25.2-1.webp" yalign 0.25 xalign 0.5 alpha 0.2 matrixcolor TintMatrix(GetLiberaColor())
+        add "Pokemon/25.2-2.webp" yalign 0.25 xalign 0.5 alpha 0.2 matrixcolor TintMatrix(GetLiberaColor(False))
     $ nick = pkmn.GetNickname()
     text nick + " " + gendersymbol + ("" if nick == pokedexlookup(pkmn.GetId(), DexMacros.Name) else "\n{size=30}{color=#000}(" + pokedexlookup(pkmn.GetId(), DexMacros.Name) + "){/size}") xminimum 550 xpos .1 yalign .05 size (70 if len(nick) < 10 else 50)
     text "Lv. " + str(pkmn.GetLevel()) xminimum 550 xalign .5 ypos .03 size 50
     text "(Cap: " + str(math.floor(pkmn.GetLevelCap())) + ", Potential: " + str(pkmn.GetMaxLevel()) + ")" xalign .5 ypos .09 size 40
-    $ secondcolorstring = pokedexlookup(pkmn.GetId(), DexMacros.Type2)
-    if (secondcolorstring == None):
-        $ secondcolorstring = ""
-    else:
-        $ secondcolorstring = "{color=#fff}/{/color}{color=" + GetTypeColor(secondcolorstring) + "}" + secondcolorstring
-    text "{color=" + GetTypeColor(pokedexlookup(pkmn.GetId(), DexMacros.Type1)) + "}" + pokedexlookup(pkmn.GetId(), DexMacros.Type1) + secondcolorstring yalign .07 size 70 xanchor 1.0 xpos 0.85 outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ]
+    
+    $ typestring = ""
+    for element in pkmn.GetTypes():
+        if (typestring != ""):
+            $ typestring += "{color=#fff}/{/color}"
+        $ typestring += "{color=" + GetTypeColor(element) + "}" + element + "{/color}"
+
+    text typestring yalign .07 size 70 xanchor 1.0 xpos 0.85 outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ]
     
     grid 4 7:
         xalign .5
         ypos .15
-        text "Stat" xminimum 300 size 40
-        text "Value" xminimum 300 xalign .5 size 40
-        text "EVs" xminimum 300 xalign .5 size 40
-        text "IVs" xminimum 300 xalign .5 size 40
+        text "{b}Stat" xminimum 300 size 40
+        text "{b}Value" xminimum 300 xalign .5 size 40
+        text "{b}EVs" xminimum 300 xalign .5 size 40
+        text "{b}IVs" xminimum 300 xalign .5 size 40
         text "HP" xminimum 300 size 40
-        text str(pkmn.GetHealth()) + "/" + str(pkmn.GetStat(Stats.Health)) xminimum 300 xalign .5 size 40
+        text str(max(pkmn.GetHealth(), pkmn.GetCaught())) + "/" + str(pkmn.GetStat(Stats.Health)) xminimum 300 xalign .5 size 40
         text str(pkmn.GetEV(Stats.Health)) + "/255" xminimum 300 xalign .5 size 40
         text str(pkmn.GetIV(Stats.Health)) + "/31" xminimum 300 xalign .5 size 40
-        text "Attack" xminimum 300 size 40
+        $ attackbonus = NatureToBonus(pkmn.GetNature(), Stats.Attack)
+        text "Attack" xminimum 300 size 40 color ("#000" if attackbonus == 1 else ("#ff0000" if attackbonus == 1.1 else "#0000ff"))
         text str(pkmn.GetStat(Stats.Attack, triggerAbilities=False, absolute=True)) xminimum 300 xalign .5 size 40
         text str(pkmn.GetEV(Stats.Attack)) + "/255" xminimum 300 xalign .5 size 40
         text str(pkmn.GetIV(Stats.Attack)) + "/31" xminimum 300 xalign .5 size 40
-        text "Defense" xminimum 300 size 40
+        $ defensebonus = NatureToBonus(pkmn.GetNature(), Stats.Defense)
+        text "Defense" xminimum 300 size 40 color ("#000" if defensebonus == 1 else ("#ff0000" if defensebonus == 1.1 else "#0000ff"))
         text str(pkmn.GetStat(Stats.Defense, triggerAbilities=False, absolute=True)) xminimum 300 xalign .5 size 40
         text str(pkmn.GetEV(Stats.Defense)) + "/255" xminimum 300 xalign .5 size 40
         text str(pkmn.GetIV(Stats.Defense)) + "/31" xminimum 300 xalign .5 size 40
-        text "Special Attack" xminimum 300 size 40
+        $ specialattackbonus = NatureToBonus(pkmn.GetNature(), Stats.SpecialAttack)
+        text "Special Attack" xminimum 300 size 40 color ("#000" if specialattackbonus == 1 else ("#ff0000" if specialattackbonus == 1.1 else "#0000ff"))
         text str(pkmn.GetStat(Stats.SpecialAttack, triggerAbilities=False, absolute=True)) xminimum 300 xalign .5 size 40
         text str(pkmn.GetEV(Stats.SpecialAttack)) + "/255" xminimum 300 xalign .5 size 40
         text str(pkmn.GetIV(Stats.SpecialAttack)) + "/31" xminimum 300 xalign .5 size 40
-        text "Special Defense" xminimum 300 size 40
+        $ specialdefensebonus = NatureToBonus(pkmn.GetNature(), Stats.SpecialDefense)
+        text "Special Defense" xminimum 300 size 40 color ("#000" if specialdefensebonus == 1 else ("#ff0000" if specialdefensebonus == 1.1 else "#0000ff"))
         text str(pkmn.GetStat(Stats.SpecialDefense, triggerAbilities=False, absolute=True)) xminimum 300 xalign .5 size 40
         text str(pkmn.GetEV(Stats.SpecialDefense)) + "/255" xminimum 300 xalign .5 size 40
         text str(pkmn.GetIV(Stats.SpecialDefense)) + "/31" xminimum 300 xalign .5 size 40
-        text "Speed" xminimum 300 size 40
+        $ speedbonus = NatureToBonus(pkmn.GetNature(), Stats.Speed)
+        text "Speed" xminimum 300 size 40 color ("#000" if speedbonus == 1 else ("#ff0000" if speedbonus == 1.1 else "#0000ff"))
         text str(pkmn.GetStat(Stats.Speed, triggerAbilities=False, absolute=True)) xminimum 300 xalign .5 size 40
         text str(pkmn.GetEV(Stats.Speed)) + "/255" xminimum 300 xalign .5 size 40
         text str(pkmn.GetIV(Stats.Speed)) + "/31" xminimum 300 xalign .5 size 40
 
+    text "EXP: " + str(math.floor(pkmn.GetExperience())) + ", To Next Level: " + str(math.floor(pkmn.CalculateAllExperienceNeededForLevel(pkmn.GetMaxLevel() + 1) - pkmn.GetExperience()) + 1) size 40 yalign .43 xalign 0.5
+
     $ status = "None"
-    if (pkmn.GetHealthPercentage() <= 0.0):
+    if (pkmn.GetHealthPercentage() <= 0.0 and pkmn.GetCaught() <= 0):
         $ status = "Fainted"
     else:
         for statustype in nonvolatiles:
             if (pkmn.HasStatus(statustype)):
                 $ status = statustype
+    
+    hbox:
+        yalign .48
+        xalign .5
+        spacing 30
+        text "Status: " + status.title() xminimum 300 size 40 yalign .5
+        if (pkmn.GetItem() == None):
+            text "Item: None" xminimum 300 size 40 yalign .5
+        else:
+            text "Item: " + pkmn.GetItem() xminimum 300 size 40 yalign .5
 
-    text "Status: " + status.title() xminimum 300 xalign .15 yalign .48 size 40 color ("#000" if pkmn.GetHealthPercentage() > 0 else "#f00")
-    text "Item: " + (pkmn.GetItem() if pkmn.GetItem() != None else "None") xminimum 300 xalign .4 yalign .48 size 40
-    text "Nature: " + NatureToString(pkmn.GetNature()) xminimum 300 xalign .65 yalign .48 size 40
-    text "Ability: " + pkmn.GetAbility() xminimum 300 xalign .9 yalign .48 size 40
+        text "Nature: " + NatureToString(pkmn.GetNature()) xminimum 300 size 40 yalign .5
+        $ fvlability = False
+        for fvl in pkmn.GetForeverals():
+            if (lookupforeveraldata(fvl, FVLMacros.FVLType) == ForeveralTypes.AddAbility):
+                $ fvlability = True
+        if (not fvlability):
+            text "Ability: " + pkmn.GetAbility() xminimum 300 size 40 yalign .5
+        else:
+            hbox:
+                text "Ability: " xminimum 300 size 40 yalign .5
+                vbox:
+                    text pkmn.GetAbility() xminimum 300 size 40 yalign .5
+                    for fvl in pkmn.GetForeverals():
+                        if (lookupforeveraldata(fvl, FVLMacros.FVLType) == ForeveralTypes.AddAbility):
+                            for ability in lookupforeveraldata(fvl, FVLMacros.FVLTypeData):
+                                text "(" + ability + ")" xminimum 300 size 40 yalign .5
+        if (usingforeverals):
+            if (pkmn.GetForeverals() == []):
+                text "Foreveral: None" xminimum 300 size 40 yalign .5
+            else:
+                text "Foreveral: " + pkmn.GetForeverals()[0] xminimum 300 size 40 yalign .5
+    
     textbutton "Back" action [Hide("stats", Dissolve(0.5)), Show("switch", Dissolve(0.5), pkmn.GetTrainer())] xminimum 300 yalign .7 xalign .6 text_xalign .5 text_size 40 text_color "#800000" text_hover_color "#FF0000" background Frame("gui/button/choice_idle_background.png")
     textbutton "Select" action [Hide("stats", Dissolve(0.5)), Return(value=(pkmn.GetTrainer().GetTeam().index(pkmn)))] xminimum 300 yalign .7 xalign .4 text_xalign .5 text_size 40 text_color "#228B22" text_hover_color "#00FF00" background Frame("gui/button/choice_idle_background.png")
 
@@ -1827,7 +2475,6 @@ screen rememberablemoves(pkmn):
             null
 
     textbutton "Back" action [Hide("movedata", Dissolve(0.5)), Hide("rememberablemoves", Dissolve(0.5)), Return("Back")] xminimum 300 yalign .4 xalign .5 text_xalign .5 text_size 40 text_color "#800000" text_hover_color "#FF0000" background Frame("gui/button/choice_idle_background.png")
-    
 
 screen SelectMon():
     if (not renpy.get_screen("partyviewer")):
@@ -1961,6 +2608,8 @@ screen currentdate():
     use repelwidget()
     if (usinginventory):
         use inventorywidget()
+    if (usingforeverals):
+        use foreveralwidget()
 
     frame:
         left_padding 10
@@ -2054,7 +2703,9 @@ screen classmates(type):
             $ value = persondex[character]["Value"]
             $ valueceil = GetCharacterLevel(character)
             add character.lower() + " uniform" + suffix xpos ((i * iteration + 1) / 10.0) - (0 if len(GetStudents(type)) == 3 else 0.05)
-            text "{size=50}{color=" + charcolor + "}" + character + "\n{/color}{size=30}Lv." + str(valueceil) + ", EXP: " + str(value) xpos ((i * iteration + 1) / 10.0) - (.05 if len(GetStudents(type)) == 3 else 0.1) + (0 if len(GetStudents(type)) == 3 else 0.01) * i color "#fff" outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ] at Transform(rotate=-15) ypos 0.1#(0.0 if i % 2 == 0 else 0.1)
+            $ specialnature = GetNature(character) == TrainerNature.Special
+            $ mood = GetMood(character)
+            text "{size=50}{color=" + charcolor + "}" + character + "\n{/color}{size=30}Lv." + str(valueceil) + ", EXP: " + str(value) + ("\n{/color}{size=30}Mood: " + moodtoword(mood) + " (" + str(mood) + ")" if usingmoods and not specialnature else ("\n{/color}{size=30}Mood: Stable" if usingmoods and specialnature else "")) xpos ((i * iteration + 1) / 10.0) - (.05 if len(GetStudents(type)) == 3 else 0.1) + (0 if len(GetStudents(type)) == 3 else 0.01) * i color "#fff" outlines [ (absolute(10), "#000", absolute(0), absolute(0)) ] at Transform(rotate=-15) ypos 0.1#(0.0 if i % 2 == 0 else 0.1)
         else:
             $ finalmatrix = TintMatrix(charcolor) * BrightnessMatrix(1.0) * ContrastMatrix(0.0)
             add character.lower() + " uniform" + suffix xpos ((i * iteration + 1) / 10.0) - (0 if len(GetStudents(type)) == 3 else 0.05) matrixcolor finalmatrix
@@ -2224,6 +2875,69 @@ screen tabledescriptions(description, npcs):
 
     textbutton description xalign 0.5 ypos 0.65 xmaximum 1500 text_color "#000" background Frame("gui/button/choice_idle_background.png") xpadding 80
 
+init python:
+    def liberize(element):
+        renpy.hide_screen("liberizemessage")
+        global libtypes
+        if (element in libtypes):
+            libtypes.remove(element)
+        else:
+            libtypes.append(element)
+            if (len(libtypes) > (2 if dawnbattle else libtypesnum)):#libtypesnum set to 2 if dawnbattle
+                libtypes = libtypes[:len(libtypes) - 1]
+                renpy.show_screen("liberizemessage", "You do not have the freedom to\nliberize into another type{w=0.5}\nyet.")
+            else:
+                libtype1 = libtypes[0]
+                libtype2 = libtypes[0]
+                if (len(libtypes) > 1):
+                    libtype2 = libtypes[1]
+                renpy.show_screen("liberizemessage", liberizefirstsentence[libtype1] + "\n" + liberizesecondsentence[libtype2])
+
+transform liberize_scroll:
+    ypos 1.0 yanchor 0.0
+    ease 0.25 yalign 0.7
+    ease 2.0 yalign 0.6
+    ease 0.25 ypos 0.0 yanchor 1.0
+
+screen liberizemessage(msg):
+    vbox at liberize_scroll:
+        xpos 0.65
+        yalign 1.0
+        text msg
+
+    timer 2.5 action Hide()
+
+screen liberize:
+    add "imagemaps/libera_tail.webp" at liberizemovein
+    imagemap at liberizefadein:
+        idle "imagemaps/libera_idle.webp"
+        hover "imagemaps/libera_hover.webp"
+        alpha False 
+
+        hotspot (278, 155, 127, 109) action Function(liberize, "Grass")#grass 
+        hotspot (452, 192, 103, 129) action Function(liberize, "Fire")#fire
+        hotspot (625, 249, 85, 123) action Function(liberize, "Water")#water
+        hotspot (798, 308, 79, 123) action Function(liberize, "Electric")#electric
+        hotspot (939, 367, 130, 109) action Function(liberize, "Fighting")#fighting
+        hotspot (1114, 420, 111, 110) action Function(liberize, "Psychic")#psychic
+        hotspot (206, 399, 117, 116) action Function(liberize, "Dark")#dark
+        hotspot (373, 442, 123, 119) action Function(liberize, "Steel")#steel
+        hotspot (547, 479, 112, 128) action Function(liberize, "Dragon")#dragon
+        hotspot (710, 525, 122, 126) action Function(liberize, "Fairy")#fairy
+        hotspot (880, 570, 120, 118) action Function(liberize, "Normal")#normal
+        hotspot (1053, 615, 110, 122) action Function(liberize, "Ghost")#ghost
+        hotspot (116, 673, 129, 97) action Function(liberize, "Flying")#flying
+        hotspot (295, 685, 117, 114) action Function(liberize, "Poison")#poison
+        hotspot (452, 722, 133, 91) action Function(liberize, "Ground")#ground
+        hotspot (636, 748, 121, 107) action Function(liberize, "Rock")#rock
+        hotspot (814, 755, 106, 124) action Function(liberize, "Bug")#bug
+        hotspot (975, 785, 127, 124) action Function(liberize, "Ice")#ice
+
+    for element in libtypes:
+        add "imagemaps/libera{}.webp".format(element.lower()) at liberizeactivefadein
+
+    textbutton "Finish" xminimum 300 text_xalign 0.5 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf" xalign 1.0 yalign 1.0 action [Hide("liberize", Dissolve(0.5)), Return("liberaconfirm")]
+
 screen map_UI():
     if (not renpy.get_screen("currentdate")):
         use currentdate()
@@ -2269,6 +2983,26 @@ screen egghunt():
         hotspot (1367, 618, 473, 385) action Return("Pledge Hall") #Bonsly
         hotspot (0, 964, 362, 116) action Return("Outside")
 
+screen makeup():
+    if (not renpy.get_screen("currentdate")):
+        use currentdate()
+
+    zorder -5
+    imagemap:
+        ground "BG/Map.jpg"
+        idle "BG/Map.jpg"
+        hover "imagemaps/Map_Hover.jpg"
+        
+        hotspot (161, 121, 429, 230) action [Hide("map_people", Dissolve(0.5)), Return("Battle Hall")] #Returns a failure message
+        hotspot (1451, 347, 376, 250) action [Hide("map_people", Dissolve(0.5)), Return("Research Center")] hovered Show("map_people", Dissolve(0.5), ["Bea", "Nate"], (1451, 347, 376, 250)) unhovered Hide("map_people", Dissolve(0.5))#Bea & Nate talking about violence
+        hotspot (88, 343, 331, 275) action [Hide("map_people", Dissolve(0.5)), Return("Recreation Center")] hovered Show("map_people", Dissolve(0.5), ["Rosa", "Nessa"], (88, 343, 331, 275)) unhovered Hide("map_people", Dissolve(0.5))#Rosa & Nessa #talking about fame, and how it's ruined them
+        hotspot (88, 621, 464, 384) action [Hide("map_people", Dissolve(0.5)), Return("Aura Hall")] hovered Show("map_people", Dissolve(0.5), ["Bianca", "Hilda", "May", "Serena"], (88, 621, 464, 384)) unhovered Hide("map_people", Dissolve(0.5))#Leaf's Roommates
+        hotspot (581, 780, 757, 258) action [Hide("map_people", Dissolve(0.5)), Return("Relic Hall")] hovered Show("map_people", Dissolve(0.5), ["Brendan", "Calem", "Hilbert"], (581, 780, 757, 258)) unhovered Hide("map_people", Dissolve(0.5))#Roommates
+        hotspot (1367, 618, 473, 385) action [Hide("map_people", Dissolve(0.5)), Return("Pledge Hall")] hovered Show("map_people", Dissolve(0.5), ["Cheren", "Silver", "Skyla"], (1367, 618, 473, 385)) unhovered Hide("map_people", Dissolve(0.5))#Disciplinary Committee
+        hotspot (1456, 140, 419, 200) action [Hide("map_people", Dissolve(0.5)), Return("Baseball Field")] hovered Show("map_people", Dissolve(0.5), ["Flannery", "Whitney"], (1456, 140, 419, 200)) unhovered Hide("map_people", Dissolve(0.5))#Flannery & Whitney's Dorm
+        hotspot (232,0, 1594, 111) action [Hide("map_people", Dissolve(0.5)), Return("Inspira")] hovered Show("map_people", Dissolve(0.5), ["Jasmine", "Grusha"], (232,50, 1594, 161)) unhovered Hide("map_people", Dissolve(0.5)) #The First Aid Squad (Grusha, Jasmine, Wally(?))
+        hotspot (0, 964, 362, 116) action [Hide("map_people", Dissolve(0.5)), Return("Outside")]
+
 screen map_people(people, location):
     $ values = {(0, 1): 0, (0, 2): -50, (1, 2): 50, (0, 3): -100, (1, 3): 0,
         (2, 3): 100, (0, 4): -150, (1, 4): -50, (2, 4): 50, (3, 4): 150}
@@ -2293,9 +3027,9 @@ screen map_confirm(location):
             textbutton "{b}Study{/b}" xminimum 800 text_xalign 0.5 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("map_confirm", Dissolve(0.5)), Return("Study")]
         if (location == "Student Center"):
             textbutton "{b}Heal Party{/b}" xminimum 800 text_xalign 0.5 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("map_confirm", Dissolve(0.5)), Function(HealParty)]
-        if (location == "Baseball Field" and "Gardenia" in GetCharsInPlace("Baseball Field") and not IsBefore(25, 4, 2004) and (getRWDay(0) == "Sunday" or timeOfDay == "Evening")):
+        if (location == "Baseball Field" and "Gardenia" in GetCharsInPlace("Baseball Field") and not IsBefore(25, 4, 2004) and (getRWDay(0) == "Sunday" or getRWDay(0) == "Saturday" or timeOfDay == "Evening")):
             textbutton "{b}Talk Business{/b}" xminimum 800 text_xalign 0.5 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("map_confirm", Dissolve(0.5)), Return("Business")]
-        if (location == "Battle Hall" and "Janine" in GetCharsInPlace("Battle Hall") and not IsBefore(26, 4, 2004) and (getRWDay(0) == "Sunday" or timeOfDay == "Evening")):
+        if (location == "Battle Hall" and "Janine" in GetCharsInPlace("Battle Hall") and not IsBefore(26, 4, 2004) and (getRWDay(0) == "Sunday" or getRWDay(0) == "Saturday" or timeOfDay == "Evening")):
             textbutton "{b}Check Levels{/b}" xminimum 800 text_xalign 0.5 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("map_confirm", Dissolve(0.5)), Return("LevelCheck")]
         if (location == "Garden" and "Professor Cherry" in GetCharsInPlace("Garden") and GetRelationshipRank("Professor Cherry") != 0):
             textbutton "{b}Check Critical Capture Rate{/b}" xminimum 800 text_xalign 0.5 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("map_confirm", Dissolve(0.5)), Return("CriticalCheck")]
@@ -2310,20 +3044,24 @@ screen map_confirm(location):
                 textbutton ("{b}[[RANK UP!]{/b} " if hasscene else "") + ">Find " + charname + posttext xminimum 800 text_xalign 0.5 text_color "#000" text_hover_color getCharColor(chartuple[0]) style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("map_confirm", Dissolve(0.5)), Return(chartuple[0])]
         textbutton "Back" xminimum 800 text_xalign 0.5 text_color "#000" text_hover_color "#f0f" style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("map_confirm", Dissolve(0.5)), Return ("Back")]
 
-screen evolution(oldid, newid):
+screen evolution(oldid, newid, liberize=False):
     $ oldimage = "images/Pokemon/" + str(oldid) + ".webp"
     $ newimage = "images/Pokemon/" + str(newid) + ".webp"
     add "BG/Blank2.jpg" at dissolvein
     add "GFX/speedlines.jpg" at speedlines
-    add newimage at evolvein
-    add oldimage at evolveaway
+    add newimage xzoom (-1 if liberize else 1) at evolvein
+    if (liberize):
+        add "images/Pokemon/25.2-1.webp" xzoom -1 at evolvein
+        add "images/Pokemon/25.2-2.webp" xzoom -1 at evolvein
+    add oldimage xzoom (-1 if liberize else 1) at evolveaway
 
-    hbox:
-        yalign .95
-        xalign .5
-        spacing 300
-        textbutton "Skip!" text_xalign 0.5 xmaximum 300 text_color "#000" text_hover_color "#0f0" style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("evolution"), Return(True)]    
-        textbutton "Abort!" text_xalign 0.5 xmaximum 300 text_color "#000" text_hover_color "#f00" style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("evolution"), Return(False)]
+    if (not liberize):
+        hbox:
+            yalign .95
+            xalign .5
+            spacing 300
+            textbutton "Skip!" text_xalign 0.5 xmaximum 300 text_color "#000" text_hover_color "#0f0" style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("evolution"), Return(True)]    
+            textbutton "Abort!" text_xalign 0.5 xmaximum 300 text_color "#000" text_hover_color "#f00" style "menu_choice_button" text_font "fonts/pkmndp.ttf" action [Hide("evolution"), Return(False)]
 
     timer 25 action [Hide("evolution", Dissolve(2.0)), Return(True)]
 
@@ -2379,8 +3117,9 @@ init python:
                 playerparty.remove(pkmn)
                 box.append(pkmn)
             else:
-                renpy.hide_screen("partymons")
-                renpy.jump("nopikachu")
+                if (not IsDate(5, 5, 2004)):
+                    renpy.hide_screen("partymons")
+                    renpy.jump("nopikachu")
         elif (pkmn in box and len(playerparty) < 6):
             box.remove(pkmn)
             playerparty.append(pkmn)
@@ -2437,7 +3176,6 @@ label pokemonextraoptions(pkmn):
             "The Pokémon has been renamed to [newnick]."
 
         "Relieve it. (Of its item.)" if (pkmn.GetItem() != None):
-            $ GetItem(pkmn.GetItem())
             $ RemoveItem(pkmn)
 
             "You do so."
@@ -2507,34 +3245,60 @@ screen credits:
             text "Dahlia Wilder" size 40 color "#fff"
             text "Wolff Steel" size 40 color "#fff"
 
-        $ spriteartists = ["Iustinus Tempus", "Chayma", "KBunink", "Dantalion", "Anthos", "Wolff Steel", "SquishyBird22"]
+        $ spriteartists = ["Iustinus Tempus", "Chayma", "KBunink", "Dantalion", "Anthos", "Wolff Steel", "SquishyBird22", "Ken Sugimori"]
         vbox:
             text "Sprite Artists" size 80 color "#fff"
             for name in spriteartists:
                 text name size 40 color "#fff"
 
-        $ specialthanks = ["Drunk Old Man", "imainmeleekirby", "JumboXtraLarge"]
+        $ specialthanks = ["Drunk Old Man", "imainmeleekirby", "JumboXtraLarge", "Bartre God Dio", "Novemball"]
         vbox:
             text "Special Thanks" size 80 color "#fff"
             for name in specialthanks:
                 text name size 40 color "#fff"
         
-        $ topstudents = ["Adamthenoob1", "Caerulight", "Calem le français", "Cyneburh", "Denial", "Drunk Old Man", "JumboXtraLarge", "Kenji Nava", "Leirbag15", "Nmorrow", "Q1Justin"]
+        $ topstudents = ["Drunk Old Man [[Lisia's grandpa]", 'Leirbag15 (Pikmin Trainer)', 'nmorrow', 'denial___', 'Calem le français', 'cinnaburh', 'seanmac317', "JXL- Tia's ICE/Astrid's Superego", 'torait21', 'caerulight', 'Lexel (Bea Simp)', 'Q1justin [[Blue Deserves Love]', 'Adamthenoob1 (#1 Simp for Hilda)']
         vbox:
             text "Teaching Assistants" size 80 color "#fff"
             for name in topstudents:
                 text name size 40 color "#fff"
 
-        $ teachingassistants = ["『 Kogasaka 』", "Adamthenoob1", "Alurayune", "Bartre", "Caerkris", "Caerulight", "Calem le français", "CHAZ", "Christianh", "Cuteboymiggy", "Cyneburh", "Denial", "Drunk Old Man", "FAKE", "FlanneryHildaAreMY#1's", "Horny", "Inferno9803", "JumboXtraLarge", "Kenji Nava", "Leirbag15", "Milo", "Myname_Jonas", "Nmorrow", "Pesto", "Pesto Fettuccine", "Q1Justin", "Qrow, Descended into Madness", "Raion", "Shinzeka", "TGASF", "Tiggy", "Velmidos", "Weez"]
+        $ teachingassistants = ['kingsting', 'shinzeka', 'Based Squire (Krok)', "Drunk Old Man [[Lisia's grandpa]", 'kingslayer3765', 'pestofettuccine', 'Leirbag15 (Pikmin Trainer)', 'velmidos9021', 'nmorrow', 'prettymiggy', 'Based King 🤴🏾 (Christian)', 'nicksaulnier', 'kogasaka', 'denial___', 'weez1ng', 'Raion [[Lyra and Serena Simp]', 'tiggyxtaggy', 'Calem le français', 'carpechaz', 'kenjinava', 'myname_jonas', "FlanneryHildaAreMY#1's", 'tgasf', 'microe', 'Pesto', 'Orion', 'inferno6703', 'Horny [[Champion Enjoyer]', 'cinnaburh', 'zajinho2b', '-Leaf simp~', 'seanmac317', 'rhaykou', 'FAKE', 'thepridefulcynicist', "JXL- Tia's ICE/Astrid's Superego", 'torait21', 'Cobra - #1 Leaf Fan', 'caerulight', 'Lexel (Bea Simp)', 'Bartre God Dio', 'himdave', 'Q1justin [[Blue Deserves Love]', 'Adamthenoob1 (#1 Simp for Hilda)', 'alurayune', 'Toop']
         vbox:
             text "Top Students" size 80 color "#fff"
             for name in teachingassistants:
                 text name size 40 color "#fff"
 
-        $ commissioners = ["Bartre", "Caerkris", "Drunk Old Man", "Ethan", "Horny", "JWillicus", "Leirbag15", "Môka", "Nick", "SerenaSimpInc"]
+        $ commissioners = ["Drunk Old Man [[Lisia's grandpa]", 'Leirbag15 (Pikmin Trainer)', 'jwillicus_', 'Ethan (EL PAPUCHO DE ANTHOS)', 'nathanrose.', 'moka6803', 'Horny [[Champion Enjoyer]', 'SerenaSimpInc-HopingforaHappyEnd', 'Bartre God Dio', 'crippledjoe', 'flintlocksq']
         vbox:
             text "Commissioners" size 80 color "#fff"
             for name in commissioners:
                 text name size 40 color "#fff"
+
+        vbox:
+            text "Backgrounds" size 80 color "#fff"
+
+            text "Love Ribbon by Razzart Visual" size 40 color "#fff"
+            text "Backgrounds by Minikle" size 40 color "#fff"
+
+            null height 50
+
+            text "Your Diary by CUBE" size 40 color "#fff"
+            text "Artworks by Kantoku, and Suimya" size 40 color "#fff"
+
+            null height 50
+
+            text "The Quintessential Quintuplets the Movie: Five Memories of My Time with You by MAGES. GAME" size 40 color "#fff"
+            text "Backgrounds by Fukuda Tomonori, and Nagai Taketo" size 40 color "#fff"
+
+            null height 50
+
+            text "Backgrounds by Sai Gakai (増助彩)/Kimagure After (きまぐれアフター)" size 40 color "#fff"
+
+            null height 50
+
+            text "Backgrounds by Min-Chi (みんちり)" size 45 color "#fff"
+            text "Taken from みんちりえ (https://min-chi.material.jp/) and みんちりのfanbox (https://min-chi.fanbox.cc/)" size 25 color "#fff"
+
         
         null height 1080

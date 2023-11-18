@@ -1,6 +1,6 @@
 ﻿init python:
     class Pokemon:
-        def __init__(self, id, level=5, moves=None, nickname=None, ivs=None, evs=None, nature=None, gender=None, item=None, ability=None, intelligence=0, vic_touched=0):
+        def __init__(self, id, level=5, moves=None, nickname=None, ivs=None, evs=None, nature=None, gender=None, item=None, ability=None, intelligence=0, teratype=None, foreverals = None, vic_touched=0):
             self.Nickname = nickname#string
             if (isinstance(id, str)):
                 id = pokedexlookupname(id, DexMacros.Id)
@@ -37,9 +37,9 @@
             self.Gender = gender#Genders Macro
             if (self.Gender == None and not IsGenderless(self)):
                 self.Gender = RandomChoice([Genders.Male, Genders.Female])
-            if (self.Id in [669, 670, 671, 548, 549, 29, 30, 31, 413, 413.1, 413.2, 629, 630, 440, 113, 242, 238, 124, 440, 113, 242, 592.1, 593.1]):
+            if (self.GetId() in [669, 670, 671, 548, 549, 29, 30, 31, 413, 413.1, 413.2, 629, 630, 440, 113, 242, 238, 124, 440, 113, 242, 592.1, 593.1]):
                 self.Gender = Genders.Female
-            if (self.Id in [32, 33, 34, 414, 627, 628, 236, 237, 106, 107, 592, 593]):
+            if (self.GetId() in [32, 33, 34, 414, 627, 628, 236, 237, 106, 107, 592, 593]):
                 self.Gender = Genders.Male
 
             self.Stats = [0, 0, 0, 0, 0, 0]
@@ -62,7 +62,26 @@
             self.Intelligence = intelligence
             self.FaintedOnTurn = -10
             self.ItemHistory = []#list of item changes in battle--set at the start of every battle. List of tuples formatted like ("Started", None, 0), ("Gained", "Oran Berry", 1), ("Lost", "Oran Berry", 2), ("Gained", "Oran Berry", 3), ("Used", "Oran Berry", 4)
+            if (teratype == None):
+                self.TeraType = pokedexlookup(self.GetId(), DexMacros.Type1)#The 'mon's inherent tera type
+            else:
+                self.TeraType = teratype
+            self.Terastalized = -1#-1 if not terastalized. Otherwise, it's the turn you terastalized
+            self.FormeOverride = None#keeps track of the current form you're taking
+            self.AbilityOverride = None#keeps track of the current ability you have
+            self.Foreverals = foreverals
+            if (self.Foreverals == None):
+                self.Foreverals = []#keeps track of what foreverals are active for you
+            self.AbilityChanged = False#keeps track of if your ability changes, through mega evolution, diveralization, or minigigamax
             self.vic_touched = vic_touched
+
+        def GetForeverals(self):
+            if (not hasattr(self, 'Foreverals')):
+                self.Foreverals = []
+            return self.Foreverals
+
+        def HasForeveral(self, foreveralname):
+            return foreveralname in self.GetForeverals()
 
         def GetFaintedTurn(self):
             if (not hasattr(self, 'FaintedOnTurn')):
@@ -108,15 +127,25 @@
                 self.ResetCaught()
             return self.WasCaught
 
-        def RecalculateStats(self):
+        def RecalculateStats(self, updateHealth = True):
             for i in range(6):
-                self.Stats[i] = round((math.floor(0.01 * (2 * pokedexlookup(self.Id, i + DexMacros.Health) + self.IVs[i] + math.floor(0.25 * self.EVs[i])) * self.Level) + 5) * NatureToBonus(self.Nature, i))
+                basestat = pokedexlookup(self.GetId(), i + DexMacros.Health)
+                for fvl in self.GetForeverals():
+                    if (lookupforeveraldata(fvl, FVLMacros.FVLType) == ForeveralTypes.Scaling):
+                        scalingmon, scalinglevel = lookupforeveraldata(fvl, FVLMacros.FVLTypeData)
+                        scalingstat = pokedexlookupname(scalingmon, i + DexMacros.Health)
+                        newstat = basestat * max((scalinglevel - self.GetLevel()) / scalinglevel, 0) + scalingstat * min(self.GetLevel() / scalinglevel, 1)
+                        if (newstat > basestat):
+                            basestat = newstat
+
+                self.Stats[i] = round((math.floor(0.01 * (2 * basestat + self.IVs[i] + math.floor(0.25 * self.EVs[i])) * self.Level) + 5) * NatureToBonus(self.Nature, i))
 
             if (self.GetId() == 292):#Shedinja
                 self.Stats[Stats.Health] = 1
             else:
-                maxhealth = round(math.floor(0.01 * (2 * pokedexlookup(self.Id, DexMacros.Health) + self.IVs[Stats.Health] + math.floor(0.25 * self.EVs[Stats.Health])) * self.Level) + self.Level + 10)
+                maxhealth = round(math.floor(0.01 * (2 * pokedexlookup(self.GetId(), DexMacros.Health) + self.IVs[Stats.Health] + math.floor(0.25 * self.EVs[Stats.Health])) * self.Level) + self.Level + 10)
                 self.Stats[Stats.Health] = maxhealth
+                self.Health = min(self.GetHealth(), maxhealth)
 
         def CalculateExperienceNeededForLevel(self, level):
             if (level < 2):
@@ -131,19 +160,19 @@
 
         def CalculateGivingExperience(self, othermon):
             ownlevel = min(AimLevel(), self.GetLevel())
-            return math.floor(10 + self.CalculateExperienceNeededForLevel(ownlevel) * ownlevel / (othermon.GetLevel() + max(0, (othermon.GetLevel() - self.GetLevel())) * 10) * pokedexlookup(self.Id, DexMacros.Total) / 300 * 0.1)
+            return math.floor(10 + self.CalculateExperienceNeededForLevel(ownlevel) * ownlevel / (othermon.GetLevel() + max(0, (othermon.GetLevel() - self.GetLevel())) * 10) * pokedexlookup(self.GetId(), DexMacros.Total) / 300 * 0.1)
 
         def GetLevelCap(self):
-            if (self.Ability == "Freelectric" and 1 in freelectricphases):
-                highestlevel = 0
-                for mon in playerparty:
-                    if (mon != self):
-                        if (mon.GetLevelCap() > highestlevel):
-                            highestlevel = mon.GetLevelCap()
-                return highestlevel + 1
-
             highest = 1
-            for element in self.GetTypes(True):
+            if (self.Ability == "Freelectric" and 1 in freelectricphases):
+                highest = classstats[getRankStat(0)] + 1
+
+            elements = self.GetTypes(True)
+            for fvl in self.GetForeverals():
+                if (lookupforeveraldata(fvl, FVLMacros.FVLType) == ForeveralTypes.AddProficiency):
+                    for proficientelement in lookupforeveraldata(fvl, FVLMacros.FVLTypeData):
+                        elements.append(proficientelement)
+            for element in elements:
                 if (classstats[element] > highest):
                     highest = classstats[element]
             return math.floor(highest)
@@ -157,26 +186,29 @@
         def LearnNewMove(self, newmoves):
             if (len(newmoves) > 0):
                 for movetuple in newmoves:
-                    move = movetuple[1]
+                    newmove = movetuple[1]
                     moveconfirmed = False
                     
-                    if (move not in self.GetMoveNames()):
-                        self.Moves.append(GetMove(move))
+                    if (newmove not in self.GetMoveNames()):
+                        newmoveobj = GetMove(newmove)
+                        self.Moves.append(newmoveobj)
                     
                         while (not moveconfirmed):
                             if (len(self.GetMoves()) > 4):
-                                renpy.say("", self.GetNickname() + " wants to learn " + move + ", but " + self.GetNickname() + " already knows four moves. Which move should " + self.GetNickname() + " forget?")
-                                removal = renpy.call_screen("nonbattlemoves", self, True)
+                                renpy.say("", self.GetNickname() + " wants to learn " + newmove + ", but " + self.GetNickname() + " already knows four moves. Which move should " + self.GetNickname() + " forget?")
+                                removal = renpy.call_screen("modalnonbattlemoves", self, True, True)
                                 moveconfirmed = renpy.display_menu([("Forget " + removal.Name, True), ("Keep " + removal.Name, False)], interact=True, screen="choice")
                                 if (moveconfirmed):
                                     self.Moves.remove(removal)
-                                    if (removal.Name != move):
-                                        renpy.say("", self.GetNickname() + " forgot " + removal.Name + " and learned " + move + "!")
+                                    if (removal.Name != newmove):
+                                        renpy.say("", self.GetNickname() + " forgot " + removal.Name + " and learned " + newmove + "!")
+                                        if (newmove != "Liberage"):
+                                            newmoveobj.PP = min(removal.PP, newmoveobj.MaxPP)
                                     else:
-                                        renpy.say("", self.GetNickname() + " did not learn " + move + "!")
+                                        renpy.say("", self.GetNickname() + " did not learn " + newmove + "!")
                             else:
                                 moveconfirmed = True
-                                renpy.say("", self.GetNickname() + " learned " + move + "!")
+                                renpy.say("", self.GetNickname() + " learned " + newmove + "!")
 
         def GainExperience(self, newexp, fainting=False):
             global starter_id
@@ -185,7 +217,7 @@
 
             if (not hasattr(self, 'Experience')):
                 self.Experience = self.CalculateAllExperienceNeededForLevel(self.Level)
-            
+
             if (not hasattr(self, 'vic_touched')):
                 self.vic_touched = 0
 
@@ -193,7 +225,7 @@
                 newexp *= 2
             
             posttext = ""
-            if (self.Level >= self.GetLevelCap() or self.vic_touched != 0):
+            if (self.Level >= self.GetLevelCap()):
                 posttext = " The experience has been stored for later!"
             renpy.say("", self.GetNickname() + " gained " + str(math.floor(newexp)) + " experience!" + posttext)
             self.Experience += newexp
@@ -202,26 +234,26 @@
 
             expleft = math.floor(self.GetExperience() - self.CalculateAllExperienceNeededForLevel(self.Level))
             if (posttext == "" and self.Level >= self.GetLevelCap() and expleft != 0):
-                renpy.say("", str(expleft) + " experience has been stored for later!") 
+                renpy.say("", str(expleft) + " experience has been stored for later!")
 
-        def LevelUp(self, faiting=False):
+        def LevelUp(self, fainting=False):
             priorlevel = self.GetLevel()
             while (self.GetExperience() > self.CalculateAllExperienceNeededForLevel(self.Level + 1) and self.Level < self.GetLevelCap()):
                 self.Level += 1
+                OldHp = self.Stats[Stats.Health]
+                self.RecalculateStats()
                 if (not fainting):
-                    OldHp = self.Stats[Stats.Health]
-                    self.RecalculateStats()
                     NewHp = self.Stats[Stats.Health]
                     self.AdjustHealth(NewHp - OldHp, directdamage=True)
                 renpy.say("", self.GetNickname() + " leveled up to level " + str(self.GetLevel()) + "!")
                 newmoves = GetLevelMoves(self, self.GetLevel(), True)
                 self.LearnNewMove(newmoves)   
 
-            if (self.GetLevel() != priorlevel):
+            if (self.GetLevel() != priorlevel and self.Id != 25.2):
                 evoconditions = []
 
                 for mon in pokedex:
-                    if (mon[DexMacros.Prevo] == pokedexlookup(self.Id, DexMacros.Forme)):
+                    if (mon[DexMacros.Prevo] == pokedexlookup(self.GetId(), DexMacros.Forme)):
                         evocondition = mon[DexMacros.Evolve]
                         if (evocondition != None and len(evocondition) <= 6 and "Lv." in evocondition):
                             evoconditions.append(mon[DexMacros.Evolve])
@@ -234,86 +266,111 @@
                 oldname = self.GetNickname()
                 damagebefore = self.GetStat(Stats.Health, absolute=True) - self.Health
 
-                passesevocondition = (self.Id in [412, 412.1, 412.2] and self.GetLevel() >= 20# burmy
-                    or self.Id == 439 and "Mimic" in self.GetMoveNames()#Mime Jr.
-                    or self.Id == 438 and "Mimic" in self.GetMoveNames()#Bonsly
-                    or self.Id == 852 and "Taunt" in self.GetMoveNames()#Clobbopus
-                    or self.Id == 190 and "Double Hit" in self.GetMoveNames()#Aipom
-                    or self.Id == 744 and timeOfDay in ["Noon", "Afternoon", "Night"] and self.GetLevel() >= 25#Rockruff
-                    or self.Id == 236 and self.GetLevel() >= 20#Tyrogue
-                    or self.Id == 458 and 223 in GetPartySpecies()#Mantyke
-                    or self.Id == 848 and self.GetLevel() >= 30#Toxel
+                passesevocondition = (self.GetId() in [412, 412.1, 412.2] and self.GetLevel() >= 20# burmy
+                    or self.GetId() == 439 and "Mimic" in self.GetMoveNames()#Mime Jr.
+                    or self.GetId() == 438 and "Mimic" in self.GetMoveNames()#Bonsly
+                    or self.GetId() == 852 and "Taunt" in self.GetMoveNames()#Clobbopus
+                    or self.GetId() == 190 and "Double Hit" in self.GetMoveNames()#Aipom
+                    or self.GetId() == 744 and timeOfDay in ["Noon", "Afternoon", "Night"] and self.GetLevel() >= 25#Rockruff
+                    or self.GetId() == 236 and self.GetLevel() >= 20#Tyrogue
+                    or self.GetId() == 458 and 223 in GetPartySpecies()#Mantyke
+                    or self.GetId() == 848 and self.GetLevel() >= 30#Toxel
                     or evocondition != "" and int(evocondition.split("Lv. ")[1]) <= self.GetLevel())
 
-                evolveinto = self.Id + 1
-                if (self.Id in [412, 412.1, 412.2] and self.GetGender() == Genders.Male):#male burmy -> mothim
+                evolveinto = self.GetId() + 1
+                if (self.GetId() in [412, 412.1, 412.2] and self.GetGender() == Genders.Male):#male burmy -> mothim
                     evolveinto = 414
-                elif (self.Id == 439):#Mime Jr -> Mr. Mime
+                elif (self.GetId() == 439):#Mime Jr -> Mr. Mime
                     evolveinto = 122
-                elif (self.Id == 194.1):#Paldean Wooper
+                elif (self.GetId() == 194.1):#Paldean Wooper
                     evolveinto = 980
-                elif (self.Id == 744):
-                    if (timeOfDay == "Afternoon"):#dusk lycanroc
+                elif (self.GetId() == 744):
+                    if (timeOfDay in ["Evening"]):#dusk lycanroc
                         evolveinto = 745.2
                     elif (timeOfDay == "Night"):#midnight lycanroc
                         evolveinto = 745.1
-                elif (self.Id == 677):
+                elif (self.GetId() == 677):
                     if (self.GetGender() == Genders.Female):#female meowstic
                         evolveinto = 678.1
-                elif (self.Id == 236):
+                elif (self.GetId() == 236):
                     if (self.GetStat(Stats.Attack, absolute=True) > self.GetStat(Stats.Defense, absolute=True)):#hitmonlee 
                         evolveinto = 106
                     elif (self.GetStat(Stats.Attack, absolute=True) < self.GetStat(Stats.Defense, absolute=True)):#hitmonchan
                         evolveinto = 107
-                elif (self.Id == 240):
+                elif (self.GetId() == 240):
                     evolveinto = 126#magmar
-                elif (self.Id == 238):
+                elif (self.GetId() == 238):
                     evolveinto = 124#jynx
-                elif (self.Id == 360):
+                elif (self.GetId() == 360):
                     evolveinto = 202#wobbufett
-                elif (self.Id == 194.1):
+                elif (self.GetId() == 194.1):
                     evolveinto = 980#clodsire
-                elif (self.Id == 190):
+                elif (self.GetId() == 190):
                     evolveinto = 424#ambipom
-                elif (self.Id == 438):
+                elif (self.GetId() == 438):
                     evolveinto = 185#sudowoodo
-                elif (self.Id == 458):
+                elif (self.GetId() == 458):
                     evolveinto = 226#Mantine
-                elif (self.Id == 848 and self.GetNature() in [Natures.Lonely, Natures.Bold, Natures.Relaxed, Natures.Timid, Natures.Serious, Natures.Modest, Natures.Mild, Natures.Quiet, Natures.Bashful, Natures.Calm, Natures.Gentle, Natures.Careful]):
+                elif (self.GetId() == 848 and self.GetNature() in [Natures.Lonely, Natures.Bold, Natures.Relaxed, Natures.Timid, Natures.Serious, Natures.Modest, Natures.Mild, Natures.Quiet, Natures.Bashful, Natures.Calm, Natures.Gentle, Natures.Careful]):
                     evolveinto = 849.1
 
                 if (passesevocondition):
-                    oldabilityslot = GetAbilities(self.Id).index(self.Ability)
+                    oldabilityslot = GetAbilities(self.GetId()).index(self.Ability)
                     renpy.say(None, "What?")
                     renpy.pause(1.0)
 
-                    evolved = renpy.call_screen("evolution", self.Id, evolveinto)
+                    renpy.music.set_volume(0.0, 0.5)
+                    renpy.music.set_volume(0.0, 0.5, channel="crowd")
+                    renpy.music.set_volume(0.0, 0.5, channel="crowd2")
+                    renpy.music.set_volume(0.0, 0.5, channel="misc")
+                    renpy.music.queue("audio/music/evolution_cut.mp3", channel="evolution")
+
+                    evolved = renpy.call_screen("evolution", self.GetId(), evolveinto)
                     if (evolved):
+                        renpy.music.set_volume(1.0, 0.5)
+                        renpy.music.set_volume(1.0, 0.5, channel="crowd")
+                        renpy.music.set_volume(1.0, 0.5, channel="crowd2")
+                        renpy.music.set_volume(1.0, 0.5, channel="misc")
+                        renpy.music.stop(channel="evolution")
+                        PlaySound("Get.ogg")
+
                         newspeciesname = pokedexlookup(evolveinto, DexMacros.Name)
-                        oldspeciesname = pokedexlookup(self.Id, DexMacros.Name)
+                        oldspeciesname = pokedexlookup(self.GetId(), DexMacros.Name)
                         self.Id = evolveinto
                         self.RecalculateStats()
-                        self.Ability = GetAbilities(self.Id)[min(oldabilityslot, len(GetAbilities(self.Id)) - 1)]
+                        self.Ability = GetAbilities(self.GetId())[min(oldabilityslot, len(GetAbilities(self.GetId())) - 1)]
                         self.AdjustHealth(self.GetStat(Stats.Health, absolute=True) - damagebefore, True)
                         renpy.say(None, "{} evolved into a {}!".format(oldname, newspeciesname))
-                        newmoves = GetLevelMoves(self, self.GetLevel(), True)
-                        self.LearnNewMove(GetEvoMoves(self) + newmoves)
                         
                         if (self.GetNickname() == oldspeciesname):
                             self.Nickname = newspeciesname
+                        if (len(self.GetForeverals()) > 0):
+                            renpy.say(None, "But its Foreveral is no longer in tune with {}'s wishes!".format(self.GetNickname()))
+                            for fvl in self.GetForeverals():
+                                foreveralinv.append(fvl)
+                            self.Foreverals = []
+                        self.ChangeForme(None, revert=True)
+                        newmoves = GetLevelMoves(self, self.GetLevel(), True)
+                        self.LearnNewMove(GetEvoMoves(self) + newmoves)
 
-                        if (self.Id == 291 and len(playerparty) < 6):#Ninjask
+                        if (self.GetId() == 291 and len(playerparty) < 6):#Ninjask
                             playerparty.append(Pokemon(292, level=self.GetLevel(), ivs=copy.copy(self.IVs), evs=copy.copy(self.EVs), nature=self.GetNature(), gender=Genders.Unknown))
 
                         if (self == starterobj):
-                            starter_id = self.Id
+                            starter_id = self.GetId()
                             starter_name = self.GetNickname()
                             starter_species_name = newspeciesname
                         
                     else:
-                        renpy.say(None, "{} didn't evolve...".format(self.GetNickname()))
+                        renpy.music.set_volume(1.0, 0.5)
+                        renpy.music.set_volume(1.0, 0.5, channel="crowd")
+                        renpy.music.set_volume(1.0, 0.5, channel="crowd2")
+                        renpy.music.set_volume(1.0, 0.5, channel="misc")
+                        renpy.music.stop(channel="evolution")
 
-                               
+                        renpy.music.queue("audio/music/evolution_cut.mp3")
+
+                        renpy.say(None, "{} didn't evolve...".format(self.GetNickname()))               
 
         def GetItem(self):
             return self.Item
@@ -359,10 +416,19 @@
                 return "{} gained the {}!".format(self.GetNickname(), item)
             elif (self.GetItem() != None):
                 self.TakeItem()
+
+            if (SecureShareAndEggAmount()):
+                renpy.notify("An error occurred, and your number of Exp Shares/Lucky Eggs has been set back to 1. Please report this bug, as well as when this showed up, in the discord. TRIGGERED ON GIVEITEM")
+
             return ""
 
+        def GetFormeOverride(self):
+            if (not hasattr(self, 'FormeOverride')):
+                self.FormeOverride = None
+            return self.FormeOverride
+
         def GetId(self):
-            return self.Id
+            return (self.Id if self.GetFormeOverride() == None else self.GetFormeOverride())
 
         def GetStatusKeys(self):
             return self.Status.keys()
@@ -390,10 +456,18 @@
         def GetWeight(self):
             return max(0.2, pokedexlookup(target.GetId(), DexMacros.Weight) - self.GetStatusCount("nimble") * 220)
 
+        def GetAbilityChanged(self):
+            if (not hasattr(self, 'AbilityChanged')):
+                self.AbilityChanged = False
+            return self.AbilityChanged
+
         def ApplyStatus(self, status, count=1, applier=None, overwrite=False):
             returnable = ""
             if (applier == None):
                 applier = self
+
+            if (status == ".tracing"):#don't need to set abilitychanged, because it's automatic
+                ReactivateAbility(self, True)
 
             if (applier != self and self.HasStatus("substitute") and not IsSoundMove(ActiveMove) and not applier.HasAbility("Infiltrator")):
                 return "The substitute absorbed the status!"
@@ -429,15 +503,20 @@
                 return "{} cannot be poisoned!".format(self.GetNickname())
             elif (self.Image == None and (status in normalstatuses or status == "drowsy") and self.HasAbility("Shields Down")):
                 return "But {}'s shield is up!".format(self.GetNickname())
+            elif ((status in normalstatuses or status == "drowsy") and self.HasAbility("Purifying Salt")):
+                return "But {}'s salt is pure!".format(self.GetNickname())
             elif (status == "burned" and self.HasAbility("Water Veil")):
                 return "Water Veil prevents burns!"
+            elif (status in ["poisoned", "badly poisoned"] and self.HasAbility("Immunity")):
+                return "{} is immune to poison!".format(self.GetNickname())
 
             if (not overwrite):
                 for affliction in normalstatuses:
-                    if ((status in normalstatuses or status == "drowsy") and affliction in self.Status.keys()):
-                        return "But {} is already {}!".format(self.GetNickname(), affliction)
-                    elif (self.HasStatus(status)):
-                        return "But {} is already {}!".format(self.GetNickname(), status)
+                    if (status[0] != "."):
+                        if ((status in normalstatuses or status == "drowsy") and affliction in self.Status.keys()):
+                            return "But {} is already {}!".format(self.GetNickname(), affliction)
+                        elif (self.HasStatus(status)):
+                            return "But {} is already {}!".format(self.GetNickname(), status)
             
             if (applier != self and status in ["burned", "paralyzed", "poisoned", "badly poisoned"] and self.HasAbility("Synchronize")):
                 applier.ApplyStatus(status, count)
@@ -460,6 +539,8 @@
                 return "{} hid behind a substitute!".format(self.GetNickname())
             elif (status == "flinching" or status[0] == "."):
                 return ""
+            elif (status == "aqua ring"):
+                return "{} set up an Aqua Ring!".format(self.GetNickname())
             elif (status == "gorging" and self.HasStatus("frenzied")):
                 return "The frenzied Cramorant is trying to swallow [pika_name]!"
             return "{} became {}! {}".format(self.GetNickname(), status, returnable)
@@ -507,7 +588,7 @@
                     ally.GiveItem(self.GetItem())
                     break
             if (IsBerry(self.GetItem()) and self.HasAbility("Cheek Pouch")):
-                self.AdjustHealth(self.GetStats(Stats.Health) / 3.0)
+                self.AdjustHealth(self.GetStat(Stats.Health) / 3.0)
             self.Item = None
 
         def ClearStatus(self, status, all=False, volatiles=False, nonvolatilesandconfusion=False):
@@ -537,7 +618,7 @@
             global activeitem
             diddamage = False
             if (absolute):
-                self.Health = math.floor(adjustment)
+                self.Health = (math.floor(adjustment) if not allowfractions else adjustment)
                 diddamage = True
             elif (directdamage or adjustment > 0 or not self.HasAbility("Magic Guard")):
                 if (adjustment < 0):
@@ -558,17 +639,17 @@
                             self.HasItem(item)
                             break               
 
-                if (self.Id == 774 and self.GetHealthPercentage() > 0.5):#Minior
+                if (self.GetId() == 774 and self.GetHealthPercentage() > 0.5):#Minior
                     self.ChangeForme("Minior (Meteor Form)")
 
-            if (self.GetHealth() == 0 and not mon in FaintedMons):
-                renpy.music.set_volume(0.5, delay=0.0, channel="music")
-                renpy.sound.queue("audio/Pokemon/Cries/" + str(self.GetId()) + ".wav", channel='sound', loop=False, tight=None)
-                renpy.music.set_volume(1.0, delay=1.0, channel="music")
+            if (self.GetId() in [334, 334.1] and dawnbattle and self.GetHealth() < 1):
+                self.Health = 1#I'm genuinely sorry I had to do this. If it's any consolation, you're very smart.
 
             return diddamage
 
         def GetHealth(self):
+            if (not hasattr(self, 'Health')):
+                self.Health = 1
             return self.Health
 
         def GetHealthPercentage(self):
@@ -621,6 +702,8 @@
                     modifier *= 2.0
                 elif (self.HasAbility("Slow Start") and self.GetTurnSwitchedIn() + 5 > Turn):
                     modifier *= 0.5
+                elif (self.HasAbility("Gorilla Tactics")):
+                    modifier *= 1.5
             elif (stat == Stats.SpecialAttack):
                 if (WeatherIs("sunny") and self.HasAbility("Solar Power", triggerAbilities)):
                     modifier *= 1.5
@@ -653,9 +736,6 @@
                 movenames.append(move.Name)
             return movenames
 
-        def GetId(self):
-            return self.Id
-
         def GetMove(self, moveid):
             return self.GetMoves()[moveid]
 
@@ -672,7 +752,7 @@
             return False
 
         def GetNickname(self):
-            return self.Nickname if self.Nickname != None else pokedexlookup(self.Id, DexMacros.Name)
+            return self.Nickname if self.Nickname != None else pokedexlookup(self.GetId(), DexMacros.Name)
 
         def GetLevel(self):
             return self.Level
@@ -695,8 +775,14 @@
                 totalchanges += self.GetStatChanges(keyname)
             return totalchanges
 
+        def GetMovePP(self, movename):
+            for move in self.GetMoves():
+                if (move.Name == movename):
+                    return move.PP
+            return 0
+
         def GetWeight(self):
-            return pokedexlookup(self.Id, DexMacros.Weight) * (2.0 if self.HasAbility("Heavy Metal") else 1.0)
+            return pokedexlookup(self.GetId(), DexMacros.Weight) * (2.0 if self.HasAbility("Heavy Metal") else 1.0)
 
         def ResetStatChanges(self):
             self.StatChanges = {}
@@ -746,8 +832,15 @@
                         elif (self.HasAbility("Competitive")):
                             returnable += " " + self.ChangeStats(Stats.SpecialAttack, 2)
                     
+                    deletechanges = []
                     for stat in self.StatChanges.keys():
                         self.StatChanges[stat] = max(min(self.StatChanges[stat], 6), -6)
+                        if (self.StatChanges[stat] == 0):
+                            deletechanges.append(stat)
+
+                    for stat in deletechanges:
+                        del self.StatChanges[stat]
+                    
                     return returnable 
             else:
                 renpy.sound.play(("audio/Stat_Increase.wav" if change > 0 else "audio/Stat_Decrease.wav"))
@@ -759,18 +852,54 @@
                     elif (self.HasAbility("Competitive")):
                         returnable += " " + self.ChangeStats(Stats.SpecialAttack, 2)
                 
+                deletechanges = []
                 for stat in self.StatChanges.keys():
                     self.StatChanges[stat] = max(min(self.StatChanges[stat], 6), -6)
+                    if (self.StatChanges[stat] == 0):
+                        deletechanges.append(stat)
+
+                for stat in deletechanges:
+                    del self.StatChanges[stat]
+                
                 return returnable
 
-        def GetTypes(self, raw=False):
+        def GetTeraType(self):
+            if (not hasattr(self, 'TeraType')):
+                self.TeraType = pokedexlookup(self.GetId(), DexMacros.Type1)
+            return self.TeraType
+
+        def GetTerastalized(self):
+            if (not hasattr(self, 'Terastalized')):
+                self.Terastalized = -1
+            return self.Terastalized
+
+        def IsTerad(self):
+            return self.GetTerastalized() != -1
+
+        def GetTypes(self, raw=False, ignoreTera=False):
             types = []
-            types.append(pokedexlookup(self.Id, DexMacros.Type1))
-            type2 = pokedexlookup(self.Id, DexMacros.Type2)
-            if (type2 != None):
-                types.append(type2)
-            if (raw):
-                return types
+            if (not self.IsTerad() or ignoreTera or raw):
+                if (self.GetId() == 25.2):
+                    if (libtypes == []):
+                        for fvl in self.GetForeverals():
+                            types.append(pokedexlookupname(GetForeveralMonname(fvl), DexMacros.Type1))
+                        if (types == []):
+                            types = ["Electric"]
+                    else:
+                        for element in libtypes:
+                            types.append(element)
+                else:
+                    types.append(pokedexlookup(self.GetId(), DexMacros.Type1))
+                    type2 = pokedexlookup(self.GetId(), DexMacros.Type2)
+                    if (type2 != None):
+                        types.append(type2)
+                if (raw):
+                    return types
+                for fvl in self.GetForeverals():
+                    if (lookupforeveraldata(fvl, FVLMacros.FVLType) == ForeveralTypes.AddType):
+                        types = types + lookupforeveraldata(fvl, FVLMacros.FVLTypeData)
+            else:
+                types.append(self.GetTeraType())
             if (BattlefieldExists("Simple World") and IsGroundedSimpleWorld(self, "Flying" in types)):
                 types = ["Normal"]
             if (self.HasStatus("trick-or-treating")):
@@ -787,10 +916,14 @@
             return element in self.GetTypes()
 
         def HasAbility(self, abilityname, triggersplash=True):
-            if (self.GetAbility() == abilityname):
-                foeignoringabilities = UsingMove and AbilityOnOpponentField(self, "Mold Breaker")
+            fvlability = False
+            for fvl in self.GetForeverals():
+                if (lookupforeveraldata(fvl, FVLMacros.FVLType) == ForeveralTypes.AddAbility and abilityname in lookupforeveraldata(fvl, FVLMacros.FVLTypeData)):
+                    fvlability = True
+            if (self.GetAbility() == abilityname or fvlability):
+                foeignoringabilities = UsingMove and MoveUser != None and MoveUser != self and MoveUser.HasAbility("Mold Breaker")
 
-                if (foeignoringabilities):
+                if (foeignoringabilities and self.GetAbility() not in ["Prism Armor"]):
                     return False
 
                 if (triggersplash):
@@ -803,10 +936,11 @@
                 return True
             return False 
 
-        def UpdateLevel(self, level):
+        def UpdateLevel(self, level, updateMoves=True):
             self.Level = level
             self.Experience = self.CalculateAllExperienceNeededForLevel(level)
-            self.Moves = GetMovesForLevel(self)
+            if (updateMoves):
+                self.Moves = GetMovesForLevel(self)
             self.RecalculateStats()
 
         def UpdateMoves(self, moves):
@@ -822,6 +956,8 @@
 
         def GetAbility(self):
             ownability = self.Ability
+            if (self.GetAbilityOverride() != None):
+                ownability = self.GetAbilityOverride()
             tracedability = self.GetStatusCount(".tracing")
             alchemizedability = self.GetStatusCount("alchemized")
             if (alchemizedability != 0):
@@ -832,8 +968,24 @@
                 ownability = "Insomnia"
             return ownability
 
-        def ChangeForme(self, formename):
-            if (formename == "Minior (Red Core)"):
+        def GetAbilityOverride(self):
+            if (not hasattr(self, 'AbilityOverride')):
+                self.AbilityOverride = None
+            return self.AbilityOverride
+
+        def ChangeForme(self, formename, revert=False):
+            if (formename == self.Id):
+                revert = True
+            if (revert):
+                self.AbilityChanged = False
+                self.FormeOverride = None
+                self.AbilityOverride = None
+            elif (isinstance(formename, float) or isinstance(formename, int)):
+                self.FormeOverride = formename
+                oldabilityslot = GetAbilities(self.Id).index(self.Ability)
+                self.AbilityOverride = GetAbilities(self.GetId())[min(oldabilityslot, len(GetAbilities(self.GetId())) - 1)]
+                self.AbilityChanged = True
+            elif (formename == "Minior (Red Core)"):
                 self.Image = "Pokemon/774-red.webp"
             elif (formename == "Minior (Orange Core)"):
                 self.Image = "Pokemon/774-orange.webp"
@@ -850,41 +1002,39 @@
             elif (formename == "Wishiwashi (School Form)"):
                 self.Image = "Pokemon/746-schooling.webp"
             elif (formename == "Castform (Rainy Form)"):
-                self.Id = 351.2
+                self.FormeOverride = 351.2
             elif (formename == "Castform (Sunny Form)"):
-                self.Id = 351.1
+                self.FormeOverride = 351.1
             elif (formename == "Castform (Snowy Form)"):
-                self.Id = 351.3
+                self.FormeOverride = 351.3
             elif (formename == "Castform (Normal)"):
-                self.Id = 351
+                self.FormeOverride = 351
             elif (formename == "Darmanitan (Standard Mode)"):
-                self.Id = 555
+                self.FormeOverride = 555
             elif (formename == "Darmanitan (Zen Mode)"):
-                self.Id = 555.1
+                self.FormeOverride = 555.1
             elif (formename == "Burmy (Plant Cloak)"):
-                self.Id = 412
+                self.FormeOverride = 412
             elif (formename == "Burmy (Sandy Cloak)"):
-                self.Id = 412.1
+                self.FormeOverride = 412.1
             elif (formename == "Burmy (Trash Cloak)"):
-                self.Id = 412.2
+                self.FormeOverride = 412.2
             elif (formename == "Rotom (Rotom)"):
-                self.Id = 479
+                self.FormeOverride = 479
             elif (formename == "Rotom (Heat Rotom)"):
-                self.Id = 479.1
+                self.FormeOverride = 479.1
             elif (formename == "Rotom (Wash Rotom)"):
-                self.Id = 479.2
+                self.FormeOverride = 479.2
             elif (formename == "Rotom (Frost Rotom)"):
-                self.Id = 479.3
+                self.FormeOverride = 479.3
             elif (formename == "Rotom (Fan Rotom)"):
-                self.Id = 479.4
+                self.FormeOverride = 479.4
             elif (formename == "Rotom (Mow Rotom)"):
-                self.Id = 479.5
+                self.FormeOverride = 479.5
             else:
                 self.Image = None
 
-            self.Stats = [self.GetStat(Stats.Health)]
-            for i in range(1, 6):
-                self.Stats.append(round((math.floor(0.01 * (2 * pokedexlookup(self.Id, i + DexMacros.Health, formename) + self.IVs[i] + math.floor(0.25 * self.EVs[i])) * self.Level) + 5) * NatureToBonus(self.Nature, i)))
+            self.RecalculateStats(False)
 
             if (math.floor(self.GetId()) == 479):# rotom move changes
                 removemove = None
@@ -925,6 +1075,8 @@
                         return "Pokemon/845.1.webp"
                     elif (self.HasStatus("gorging")):
                         return "Pokemon/845.2.webp"
+                elif (self.Id == 25.2):
+                    return "Pokemon/25.2.webp" 
                 return "Pokemon/" + str(self.GetId()) + ".webp"
             else: 
                 return self.Image
@@ -955,6 +1107,12 @@
 
         def GetTrainerType(self):
             return self.TrainerType
+
+        def PlayCry(self):
+            if renpy.exists("Pokemon/Cries/{}.wav".format(self.GetId())):
+                PlaySound("Pokemon/Cries/{}.wav".format(self.GetId()), otherchannel="altcry")
+            else:
+                PlaySound("Pokemon/Cries/{}.wav".format(math.floor(self.GetId())), otherchannel="altcry")
 
         def GetVicTouched(self):
             return self.vic_touched

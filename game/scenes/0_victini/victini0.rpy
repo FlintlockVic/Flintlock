@@ -77,6 +77,7 @@ label victini0:
     scene darklands with fade
     show blank2 behind darklands
 
+    narrator "Navigating away from the gray likeness of Relic Hall, you trek outside, and are met with a horrifying sight."
     red surprised "This isn't...{w=.5} the school I remember. What happened here?"
     $ renpy.music.play("Audio/Pokemon/pikachu_scared.ogg", channel="altcry")
     pikachu surprised "pika..."
@@ -789,6 +790,7 @@ label victini0:
     extend @normal "Besides, how would you have even imagined me in the first case? You don't know what I am. You said as much earlier."
     red @confused "A subconscious doesn't need to name something that it imagines, you know..."
     victini done "Mrgrgr..."
+    pause 1.0
     show victini angry
     narrator "Interrupting the conversation was a deafening stomach growl, with the discomfort on the Pokemon's face growing immense."
     red "Was that your stomach?"
@@ -810,7 +812,7 @@ label victini0:
     victini closedeyes frownmouth "I've only survived this long because I had enough foresight to travel with plentiful rations. And because I'm able to easily boil my own clean water."
     victini "But even doing that, I've run out of food a few days ago. There are no supplies in this world worth salvaging. I'm running on literal fumes."
     red @surprisedmouth sadbrow "So you're saying... if we don't find a way to escape this place, we'll starve to death? {w=.5}And by fighting too much, we'd only be burning what energy we have left at a faster rate?"
-    victini angryeyes frownmouth eyesparkles2 @tears2 "Yeah. That sums it up. We're in a damned if you do, damned if you don't type of situation."
+    victini angryeyes frownmouth eyesparkles2 tears2 "Yeah. That sums it up. We're in a damned if you do, damned if you don't type of situation."
     red @angrybrow talking2mouth "So what should we do? What action can we take?"
     victini "...{w=.5} There's not much we can do... "
     red talking2mouth @surprisedeyes "What?! What are you saying?"
@@ -826,16 +828,16 @@ label victini0:
     red "Because while I'm still alive, I won't let us die in such pity! I'm just a powerless human, with no mastery of fire nor flight! So if I refuse to surrender, what's your excuse?"
     victini surprisedmouth ".{w=.2}.{w=.2}."
     red "There has to be a way back, and we're going to find it! Together!"
-    red "You don't have to take on this world alone like you have up until now, because we'll be able to support each other."
+    red "You don't have to take on this world alone like you have up until now, because we'll be able to support each other! We'll shoulder this burden together!"
     $ renpy.music.play("Audio/Pokemon/pikachu_excite4.ogg", channel="altcry")
     pikachu neutral_2b "Pika!!!"
-    red happy "See? [pika_name] agrees, too."
+    red happy "See? [pika_name] agrees with me, too."
     red @closedbrow tears "Between the three of us, we still have hope! Hope to get back! Hope to {w=.5}{i}{cps=8}live{/i}{/cps}! {w=.5}No matter how dire, we still live, so we can still have hope!"
     victini unamusedmouth tears2".{w=.5}.{w=.5}."
     red happy tears ".{w=.5}.{w=.5}."
     victini normal -cry "...Heh. {w=.5} Heh heh."
     victini @smirkmouth angryeyes"...{w=.5}I was wrong. {w=.5} Completely wrong in my judgement of you. There's something more to you than what is visible, it seems."
-    victini @talking "I don't know what I was thinking... {w=.5}you're right. We have to try. To go out like this... {w=.5}would be pathetic."
+    victini @talking "I don't know what I was thinking... {w=.5}you're right. We have to try. To go out like this... {w=.5}would be pathetic. I'd stain my heritage by doing such a thing."
     show victini:
         rotate 90 zoom 0.75 ypos .67
         ease 3.0 rotate 0 ypos .55
@@ -1307,6 +1309,7 @@ label victini0:
     victini @frownmouth "I can't hold a whatever-this-door-is open and go in before you. I'll go after!"
     red @angry "OK!"
     victini @angry "Here... {w=.5}we... hng..!{w=.5} go...!"
+    hide screen currentdate
     show blank
     $ renpy.sound.queue("audio/BurnDamage.wav", channel='sound', loop=False, tight=None)
     $ renpy.sound.queue("audio/BurnDamage.wav", channel='sound', loop=False, tight=None)
@@ -1364,7 +1367,25 @@ label victini0:
     hide red
     hide victini
     hide pikachu
-    scene dorm_A
+
+    $ timeOfDay = "Early Morning"
+
+    call calendar(1) from _call_calendar_v
+
+    show earlymorning at vspaz
+
+    pause 3.5    
+
+    #queue music "Audio/Music/Road to Viridian City.ogg"
+
+    scene dorm_A with Dissolve(2.0)
+    $ renpy.transition(dissolve)
+    #show screen currentdate
+
+    $ renpy.pause(1.0, hard=True)
+
+    #hide blank2
+    #scene dorm_A
 
     show victini
     victini happy "That's all for now! But here's some expressions!"
@@ -1388,4 +1409,4 @@ label victini0:
     victini angrymouth angryeyes "test"
 
     victini smirkmouth "Back to the normal game. If things break, not my fault."
-    jump day010405
+    #jump day010405

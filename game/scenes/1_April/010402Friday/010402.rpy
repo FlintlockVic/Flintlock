@@ -314,7 +314,7 @@ if (profanity):
             red "So someone could've, like... {cps=20}climbed up from outside, and... {cps=15}gone in there..."
             
             leaf ".{w=0.25}.{w=0.25}.{w=0.25}"
-            leaf "{cps=12}{i}Through the window!?{/i}"
+            leaf "{cps=12}{i}Through the window?!{/i}"
             
             play sound "Audio/GenericDoorOpen.ogg"
             
@@ -338,7 +338,7 @@ if (profanity):
             red -closedeyes -frownmouth "I should be able to survive a two-story fall if I just go through the window."
             
             leaf angrysmilemouth angrybrow ".{w=0.25}.{w=0.25}.{w=0.25}"
-            leaf "{cps=12}{i}Through the window!?{/i}"
+            leaf "{cps=12}{i}Through the window?!{/i}"
             
             play sound "Audio/GenericDoorOpen.ogg"
             
@@ -378,7 +378,7 @@ else:
             red "So someone could've, like... {cps=20}climbed up from outside, and... {cps=15}gone in there..."
             
             leaf ".{w=0.25}.{w=0.25}.{w=0.25}"
-            leaf "{cps=12}{i}Through the window!?{/i}"
+            leaf "{cps=12}{i}Through the window?!{/i}"
             
             play sound "Audio/GenericDoorOpen.ogg"
             
@@ -402,7 +402,7 @@ else:
             red -closedeyes -frownmouth "I should be able to survive a two-story fall if I just go through the window."
             
             leaf angrysmilemouth angrybrow ".{w=0.25}.{w=0.25}.{w=0.25}"
-            leaf "{cps=12}{i}Through the window!?{/i}"
+            leaf "{cps=12}{i}Through the window?!{/i}"
             
             play sound "Audio/GenericDoorOpen.ogg"
             
@@ -482,6 +482,9 @@ $ renpy.pause(2.0, hard=True)
 
 leaf sadbrow blush -frownmouth "...a lot of fun.{w=0.5} Probably the most fun I've had in a while."
 leaf happy "Let's do this again sometime!"
+
+show leaf:
+    alpha 1.0 ypos 1.0 zoom 1.0
 
 red closedeyes frownmouth "I'm going to do my best to avoid that, but if I can't...{w=0.5}{nw}"
 red happy "I'm going to do my best to avoid that, but if I can't...{fast} sure."
@@ -619,7 +622,7 @@ red "Huh."
 red -surprised "To me, he was just my neighbor."
 
 ethan "Wow, you lived next to him? Wait..."
-ethan surprised "Shit, I remember you! You nearly ran our teacher over while we were walking through the center of town! You were carrying a fat Pikachu, right?"
+ethan surprised "Shit, I remember you! You nearly ran our teacher over while we were walking through the center of town!"
 red happy "I don't remember that, but that sounds like me, alright!"
 
 ethan "Huh. Small world."
@@ -633,7 +636,7 @@ ethan happy "Haha, yeah."
 pause 1.0
 ethan sadbrow happymouth "A what?"
 show ethan surprised with dis
-red "Oh, it's a Pokémon from Hoenn. Normal-type. Has two big ears that can both recieve and emit sound. Most of them are completely immune to sound-based attacks."
+red "Oh, it's a Pokémon from Hoenn. Normal-type. Has two big ears that can both receive and emit sound. Most of them are completely immune to sound-based attacks."
 ethan "Dude... you just know that?"
 red sadeyes sadeyebrows "Well... yeah. I've studied a bit."
 ethan happy "Pretty impressive, [first_name]. I think I know who I'm going to want to have as a study partner."
@@ -688,7 +691,7 @@ ethan "Cool. Let's just get our stuff unpacked, then--"
 
 play sound "Audio/Door_Open1.mp3"
 
-ethan angrybrow surprisedmouth "Oh, what now!?"
+ethan angrybrow surprisedmouth "Oh, what now?!"
 show ethan surprised with dis
 show calem surprised with dis
 
@@ -806,7 +809,7 @@ show brendan at getfurther, rightside
 
 brendan -happy talking2mouth "Sick. You and I, we'll run together, then. You can make sure I don't skip leg day."
 red -happy "That's quite a responsibility, but I'll do what I can."
-ethan happymouth "Guys, you see what this means? All five of us are here now! The five roomates that'll spend the next year together! Isn't that incredible?"
+ethan happymouth "Guys, you see what this means? All five of us are here now! The five roommates that'll spend the next year together! Isn't that incredible?"
 calem happybrow "It certainly does seem like the start of something rather excellent. I look forward to learning about, and perhaps even befriending, all of you."
 brendan happy "Likewise, guys! Hey, if any of you need any help with anything, or you want to work out, you just let me know. Brendan's here for friendin'!"
 show brendan angry with dis
@@ -930,7 +933,7 @@ ethan "Who ya looking for, Brendan?"
 calem angry "{size=30}What, you got his name right?{/size}"
 brendan "My girlfriend. She said she'd meet up with me during orientation."
 show calem surprised with dis
-ethan surprised "Damn, dude! You have a girlfriend here already!?"
+ethan surprised "Damn, dude! You have a girlfriend here already?!"
 brendan happy "Oh, nah, dude, you got it wrong. She's my friend from childhood. We enrolled here together."
 show calem closedbrow smilemouth with dis
 ethan -surprised "Ohhhhh, okay. I was going to say, man, that's scary fast."
@@ -1053,7 +1056,7 @@ show may surprisedmouth deadbrow at monochrome:
         ease 0.02 ypos 0
         repeat 40
 
-show ethan surprisedmouth deadbrow at monochrome:
+show ethan surprisedmouth deadeyes deadeyebrows at monochrome:
     parallel:
         xpos 0.6
         ease 0.02 xpos 0.65
@@ -1114,11 +1117,11 @@ $ renpy.pause(0.5, hard=True)
 
 play sound "Audio/Complaining.ogg"
     
-red angrybrow surprisedmouth "What kind of terrible speaker makes a sound like that!?"
+red angrybrow surprisedmouth "What kind of terrible speaker makes a sound like that?!"
 
 play sound "Audio/Mic_Feedback2.mp3"
 
-roxanne @angry "--telling you this stupid thing won't work!"    
+roxanne uniform @angry "--telling you this stupid thing won't work!"    
 roxanne @surprised ".{w=0.25}.{w=0.25}.{w=0.5}{nw}"
 
 queue music "Audio/Music/Kalos_Start.ogg" noloop
@@ -1129,7 +1132,7 @@ roxanne @happy "...{fast}Oh, there we go!"
 redmind -angrybrow thinking "I don't think she's aware half the people in this room are still brain dead on the floor after that uproar..."
 redmind "If my ears had eyes, they'd be crying."
     
-mace "What was that!?{w=0.5} Some kind of hazing ritual!?"
+mace "What was that?!{w=0.5} Some kind of hazing ritual?!"
 face "Please, no more!"
     
 show flannery furious veins:
@@ -1345,7 +1348,7 @@ calem happy "I'm taking notes."
     
 roxanne @closedbrow talkingmouth "{color=#0048ff}The first period of each day is homeroom,{/color} lasting two hours. Core subjects will be covered here by your professor."
 
-brendan surprised "Two hours!?"
+brendan surprised "Two hours?!"
 calem thinking "I know. Two hours is hardly enough time to cover all the material."
 may sad "Especially since we only have a year..."
 ethan surprised "Uh, that's not what he was implying, guys."
@@ -1358,7 +1361,7 @@ roxanne "{color=#0048ff}Following homeroom will be an hour of one Pokémon type 
 ethan surprised "Whoa, hold up."
 ethan "Are we specializing in two Pokémon types?{w=0.5} Only two out of eighteen?"
 calem -thinking "Not quite. You can certainly take only the same two electives every day, if you wish, but you're permitted to switch between electives at will."
-brendan surprised "Huh!? How does that work?"
+brendan surprised "Huh?! How does that work?"
 calem @talkingmouth "Due to the high teacher-to-student ratio Kobukan boasts, instructors are able to adjust the curriculum to be appropriate to any student's level, even if they've never taken that class before."
 red @talkingmouth "That's another advantage of Kobukan's unique one-year program. We have to work three times as hard, and three times as fast, as other schools, but students can customize their education."
 redmind thinking "I know a lot of Kobukan students, especially the ones that went on to excel, focused on two to three electives. Mastering all eighteen types in one year just doesn't seem feasible."
@@ -1390,9 +1393,9 @@ brawly @angrybrow talking2mouth "Hey, did you know about this curfew thing?"
 
 falkner uniform @talkingmouth "Yes."
 
-brawly @sad "Wha--{w=0.25} Why does everyone know except me!?"
+brawly @sad "Wha--{w=0.25} Why does everyone know except me?!"
 
-roxanne @angry "Will you {i}shut up!?{/i} We're in the middle of an assembly right now!"
+roxanne @angry "Will you {i}shut up?!{/i} We're in the middle of an assembly right now!"
 roxanne @closedbrow angrymouth "It's your own fault you didn't show up to the meeting when we discussed this! Maybe now you'll start taking your job more seriously!"
 
 redmind sad "Oh, poor Brawly. To get tongue-lashed like this in front of the entire auditorium..."
@@ -1480,7 +1483,7 @@ red "I think I'll probably swap between electives."
 show may surprised with dis
 show calem surprised with dis
 show brendan surprised with dis
-ethan surprised "Really!? I heard that's really tricky to do right, though!"
+ethan surprised "Really?! I heard that's really tricky to do right, though!"
 red sadeyes sadeyebrows talkingmouth "So have I. But almost all the Champions that graduated from Kobukan did it. I wouldn't be the first."
 show may -surprised with dis
 show calem -surprised with dis
@@ -1523,7 +1526,7 @@ show hilbert angry:
     xpos -0.5
     ease 0.25 xpos 0.2
 
-hilbert "What!? Hilda!?"
+hilbert "What?! Hilda?!"
 
 pause 1.0
 
@@ -1544,7 +1547,7 @@ show calem:
 
 pause 1.0
 
-hilbert "Did you say Hilda!? Answer me!"
+hilbert "Did you say Hilda?! Answer me!"
 
 show brendan:
     xpos 0.5
@@ -1579,8 +1582,8 @@ show ethan surprised:
 
 show calem surprised
 
-calem "WHAT!?"
-ethan angry "Oh, what now!?"
+calem "WHAT?!"
+ethan angry "Oh, what now?!"
 calem "Please, describe her to me!"
 show ethan surprised with dis
 may "Um, well, she's got flawless skin, a massive chest, really long legs--"
@@ -1883,7 +1886,7 @@ show blue talkingmouth:
     zoom 1.0 ypos 1.0
     ease 0.5 zoom 1.25 ypos 1.1 xpos 600
 
-blue "Did you sneak in just to follow me around!? That's creepy as shit!"
+blue "Did you sneak in just to follow me around?! That's creepy as shit!"
 blue "You better scram before I call security on your ass!"
 
 red "Give me a break.{w=0.5} I've got an invitation, just like you, [blue_name]."
@@ -2067,7 +2070,7 @@ show misty angry:
     ease 1.5 ypos 1.0 rotate 0.0
         
 misty "Don't 'whuh' me! What's with that dumbass look on your face?"
-misty "Are you deaf or just stupid!? Don't just stand there and stare! At least admit you weren't paying attention!{w=0.25} 'Cause clearly you weren't!"
+misty "Are you deaf or just stupid?! Don't just stand there and stare! At least admit you weren't paying attention!{w=0.25} 'Cause clearly you weren't!"
 
 menu:
     "I'm very sorry.":
@@ -2138,7 +2141,7 @@ menu:
         
         pause 1.0
         
-        red angry "Ugh. Has anyone ever told you... {size=40}you don't take criticism too well!?{/size}"
+        red angry "Ugh. Has anyone ever told you... {size=40}you don't take criticism too well?!{/size}"
 
     "My bad, but tone it down.":
         show misty surprisedbrow -angrymouth with dis
@@ -2476,9 +2479,9 @@ hide calem
 show mace surprised with dis
 show face surprised with dis
 if (profanity):
-    red "Coincidence, my ass!{w=0.5} What's my bag doing running around the lobby floor!?"
+    red "Coincidence, my ass!{w=0.5} What's my bag doing running around the lobby floor?!"
 else:
-    red "Coincidence, my ***!{w=0.5} What's my bag doing running around the lobby floor!?"
+    red "Coincidence, my ***!{w=0.5} What's my bag doing running around the lobby floor?!"
 
 show calem thinking:
     alpha 0.0 xpos 0.25
@@ -2647,7 +2650,7 @@ menu:
         hide text2
         hide text3
 
-        ethan "Hey, over there, I see your bag!{w=0.5} It's.{w=0.25}.{w=0.25}.{w=0.5} really moving by itself!?"
+        ethan "Hey, over there, I see your bag!{w=0.5} It's.{w=0.25}.{w=0.25}.{w=0.5} really moving by itself?!"
         calem "Obviously not. Whatever's inside it must be propelling its locomotion."
         
         show backpack:
@@ -2726,7 +2729,7 @@ else:
             repeat 7
 
 show calem surprisedmouth deadbrow at leftside, monochrome behind backpack
-show ethan surprisedmouth deadbrow at monochrome behind backpack
+show ethan surprisedmouth deadeyes surprisedeyebrows at monochrome behind backpack
 show brendan surprisedmouth deadbrow at rightside, monochrome behind backpack
 
 "Dormies" "\"{size=48}AaaaarrrRGBLRLBLRBLLBR{/size}\""
@@ -2829,7 +2832,7 @@ show redpika01:
 
 extend ""
 
-red "[pika_name]!?{w=0.5} What... How--"
+red "[pika_name]?!{w=0.5} What... How--"
 
 play sound "Audio/Pokemon/pikachu_happy3.ogg"
 
@@ -2843,7 +2846,7 @@ hide brendan
 
 calem thinking "...You brought a Pikachu?{w=0.5} You didn't mention that when I asked you what was in the bag."
 
-red "No! I left him with my mom and...{w=0.25} how did you get here?{w=0.5} Did you stow away in my suitcase!?"
+red "No! I left him with my mom and...{w=0.25} how did you get here?{w=0.5} Did you stow away in my suitcase?!"
 
 pikachu neutral_2 "Pikachu! Pi-Pikachu!"
 
@@ -2877,14 +2880,14 @@ pause 1.0
 
 security "So, this is what's causing all the commotion.{w=0.5} Young man, is that your Pokémon?"
 
-red sad "Yes, sir. He is."
+red sad "Yes, Sir. He is."
     
 security "Young man, allowing your Pokémon to freely roam the residence hall is one thing, but endangering the students and faculty in this hall?"
 security "I'm afraid I'm going to have to ask you and your Pokémon to come with me to the office."
 
 show calem at leftside with dis
 
-calem "Pardon, sir, but I don't think that's very fair for [first_name] or his Pikachu."
+calem "Pardon, Sir, but I don't think that's very fair for [first_name] or his Pikachu."
 calem "We can't blame him for being frightened by an unfamiliar environment.{w=0.5} He was only trying to reach [first_name] before everyone here began to aggravate him."
     
 show brendan at rightside with dis
@@ -2900,7 +2903,7 @@ brendan closedbrow "Right?{w=0.5} What kinda security system do you have where s
 security "Hmph. {w=0.5}I see what you're doing, boys, but the rules are very clear here. I'll need to take this young man to the office, and if you interfere, I'll have to report you, too."
 show calem surprised with dis
 show brendan surprised with dis
-ethan "R-report us!? For what!? Standing up for a friend?"
+ethan "R-report us?! For what?! Standing up for a friend?"
 red happy "Hey, guys, chill. Don't worry, I'll figure something out. Don't get in trouble for me."
 show calem sad with dis
 show brendan sad with dis
@@ -2980,7 +2983,7 @@ ethan "Dude.{w=0.5} Was Hitcher actually going easy on us before...?"
 
 pause 1.0
 
-red sad "Uh, if it makes you feel any better, sir, I don't think you did that bad a job...?"
+red sad "Uh, if it makes you feel any better, Sir, I don't think you did that bad a job...?"
 red "..."
 red angrybrow -sadmouth "Wait, where'd he go?"
 calem thinking "Ran off that way.{w=0.5} Crying, I believe."
@@ -3173,8 +3176,7 @@ window hide
 show blank2 with Dissolve(1.0)
 $ renpy.pause(1.0, hard=True)
 
-show relichall_B with dis:
-    alpha 1.0
+show relichall_B with dis
 
 redmind closedeyes "I'll admit. I'm a little scared that if I go to sleep now, I'll wake up and realize that getting into Kobukan Academy, which was always my dream, was just that--a dream."
 redmind "But now I know it's real.{w=0.5} My subconscious isn't clever enough to have [pika_name] hitch a ride to Kobukan in my luggage. Even my wildest fantasies of getting into Kobukan didn't have that."
