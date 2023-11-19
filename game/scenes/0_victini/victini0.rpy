@@ -1409,4 +1409,4 @@ label victini0:
     victini angrymouth angryeyes "test"
 
     victini smirkmouth "Back to the normal game. If things break, not my fault."
-    #jump day010405
+    jump day010405
